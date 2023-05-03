@@ -20,17 +20,17 @@ func New(repository repository.Repository) user.Repository {
 }
 
 // Create creates a new user in the repository.
-func (u UserUseCase) Create(ctx context.Context, newUser models.User) error {
-	err := u.repo.Create(ctx, newUser)
+func (u UserUseCase) Create(ctx context.Context, newUser models.User) (int, error) {
+	userId, err := u.repo.Create(ctx, newUser)
 	if err != nil {
 		log.Println(err)
-		return errors.New("Couldn't create user")
+		return -1, errors.New("Couldn't create user")
 	}
-	return nil
+	return userId, nil
 }
 
 // GetById gets the user with the given id from the repository.
-func (u UserUseCase) GetById(ctx context.Context, id string) (models.User, error) {
+func (u UserUseCase) GetById(ctx context.Context, id int) (models.User, error) {
 	user, err := u.repo.GetById(ctx, id)
 	if err != nil {
 		log.Println(err)
@@ -50,7 +50,7 @@ func (u UserUseCase) GetByMail(ctx context.Context, mail string) (models.User, e
 }
 
 // BanUser bans the user with the given id.
-func (u UserUseCase) BanUser(ctx context.Context, id string) error {
+func (u UserUseCase) BanUser(ctx context.Context, id int) error {
 	err := u.repo.BanUser(ctx, id)
 	if err != nil {
 		log.Println(err)
