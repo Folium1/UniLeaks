@@ -1,6 +1,8 @@
 package delivery
 
-import "uniLeaks/auth"
+import (
+	"uniLeaks/auth"
+)
 
 type Handler struct {
 	useCase auth.UseCase

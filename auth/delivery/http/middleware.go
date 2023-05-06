@@ -2,45 +2,70 @@ package delivery
 
 import (
 	"context"
+	"log"
 	"net/http"
-	"strings"
 	"time"
+	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-// AuthAndRefreshMiddleware is a Gin middleware function that handles authentication and token refreshing.
+// AuthAndRefreshMiddleware checks for the presence of an auth token in cookies.
+// If the auth token is missing, it tries to refresh the token using the refresh token.
+// If the refresh token is missing, it deletes cookies and redirects to the login page. If the refresh token is present,
+// It generates a new auth token and saves it. The user ID is then set in the context and cookies
+// And the request is passed to the next middleware.
 func (h Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the token from cookies, and redirect to the login page if it doesn't exist or is invalid.
-		existedToken, err := h.getTokenFromCookies(c)
+		// Create a context with a timeout of 5 seconds.
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*5)
+		defer cancel()
+
+		// Get the auth token from cookies.
+		existedAuth, err := h.getAuthTokenFromCookies(c)
 		if err != nil {
-			h.deleteCookies(c)
-			c.Redirect(http.StatusFound, "/user/login")
+			// If the auth token is missing, try to refresh the token using the refresh token.
+			refreshToken, err := h.getRefreshTokenFromCookies(c)
+			if err != nil {
+				// If the refresh token is missing, redirect to the login page.
+				h.handleInvalidToken(http.StatusFound, c)
+				return
+			}
+
+			// Get the user ID from the refresh token.
+			userId, err := h.useCase.GetUserId(ctx, refreshToken)
+			if err != nil {
+				log.Println(err)
+				h.handleInvalidToken(http.StatusFound, c)
+				return
+			}
+
+			// Generate a new auth token and save it.
+			newAuthToken := models.Token{TokenType: AuthtString, Value: h.generateToken(userId, AuthTokenDuration), Exp: AuthTokenDuration, UserId: userId}
+			err = h.useCase.SaveToken(ctx, newAuthToken)
+			if err != nil {
+				log.Println(err)
+				h.handleInvalidToken(http.StatusFound, c)
+				return
+			}
+
+			// Set the user ID in the context and cookies.
+			c.Set("userId", userId)
+			h.SetTokenToCookies(c, newAuthToken)
+			c.Next()
 			return
 		}
 
-		// If the token is a refresh token, validate it and create a new access token.
-		if existedToken.TokenType == RefreshString {
-			res := strings.Split(existedToken.Tk, " ")
-			if len(res) != 2 || res[0] != "Bearer" {
-				h.deleteCookies(c)
-				c.Redirect(http.StatusFound, "/user/login")
-				return
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			userId, err := h.useCase.GetUserId(ctx, existedToken)
-			if err != nil {
-				h.deleteCookies(c)
-				c.Redirect(http.StatusFound, "/user/login")
-				return
-			}
-			authToken := h.createAuthToken(userId)
-			h.SetTokenToCookies(c, authToken)
+		// Get the user ID from the auth token.
+		userId, err := h.useCase.GetUserId(ctx, existedAuth)
+		if err != nil {
+			log.Println(err)
+			h.handleInvalidToken(http.StatusFound, c)
+			return
 		}
 
-		// Proceed to the next middleware.
+		// Set the user ID in the context and proceed to the next middleware.
+		c.Set("userId", userId)
 		c.Next()
 	}
 }
