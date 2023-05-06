@@ -5,6 +5,8 @@ import (
 	"errors"
 	repository "uniLeaks/auth/repository/redis"
 	"uniLeaks/models"
+
+	"github.com/redis/rueidis"
 )
 
 type UseCase struct {
@@ -34,8 +36,8 @@ func (u UseCase) DeleteToken(ctx context.Context, token models.Token) error {
 func (u UseCase) GetUserId(ctx context.Context, token models.Token) (int, error) {
 	id, err := u.repo.GetUserId(ctx, token)
 	if err != nil {
-		if err.Error() == "Token not valid" {
-			return -1, err
+		if err == rueidis.Nil {
+			return -1, errors.New("No user with that token")
 		}
 		return 0, err
 	}
