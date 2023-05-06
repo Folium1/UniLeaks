@@ -7,7 +7,7 @@ import (
 	"log"
 	"uniLeaks/models"
 	"uniLeaks/user"
-	repository "uniLeaks/user/repository/mysql"
+	repository "uniLeaks/user"
 )
 
 type UserUseCase struct {
