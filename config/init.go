@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -9,6 +11,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/redis/rueidis"
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -18,6 +22,24 @@ func init() {
 	if err != nil {
 		log.Println("Couldn't load local variables, err:", err)
 	}
+}
+
+func NewDriveClient() (*drive.Service, error) {
+	key, err := ioutil.ReadFile("leaks-386216-becb63cca935.json")
+	if err != nil {
+		fmt.Printf("Failed to read key file: %v", err)
+		return nil, err
+	}
+
+	// Create a new Drive API client
+	ctx := context.Background()
+	clientOption := option.WithCredentialsJSON(key)
+	service, err := drive.NewService(ctx, clientOption)
+	if err != nil {
+		fmt.Printf("Failed to create Drive service: %v", err)
+		return nil, err
+	}
+	return service, nil
 }
 
 // MysqlConn connects to mysql, logs if error has occured
