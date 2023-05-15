@@ -21,7 +21,7 @@ type SubjectData struct {
 	Faculty         string `json:"faculty"`
 	Subject         string `json:"subject"`
 	YearOfEducation string `json:"edu_year"`
-	ModuleNum       uint   `json:"module"`
+	ModuleNum       uint64 `json:"module"`
 	IsModuleTask    bool   `json:"is_module"`
 	IsExam          bool   `json:"is_exam"`
 }
