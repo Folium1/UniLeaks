@@ -125,7 +125,7 @@ func (h Handler) getUserId(tk models.Token) (int, error) {
 
 // SetTokenToCookies sets given token to cookies in a Gin context
 func (h Handler) SetTokenToCookies(c *gin.Context, token models.Token) {
-	c.SetCookie(token.TokenType, fmt.Sprintf("Bearer "+token.Value), int(token.Exp), "", "", false, true)
+	c.SetCookie(token.TokenType, fmt.Sprintf("Bearer "+token.Value), int(token.Exp), "", "", true, true)
 }
 
 // handleInvalidToken handles middleware errors by deleting cookies and redirecting to login page
