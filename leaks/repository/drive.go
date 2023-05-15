@@ -68,8 +68,7 @@ func (r Repo) SaveFile(data models.LeakData) error {
 // GetList is a function that returns a list of files from Google Drive that match the provided LeakData.
 func (r Repo) GetList(data models.SubjectData) ([]*drive.File, error) {
 	// Build the query for searching files
-	query := "(mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document' or mimeType='image/jpeg') or mimeType='image/png'"
-	query += fmt.Sprintf(" and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'}",
+	query := fmt.Sprintf("properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'} and properties has {key='%s' and value='%s'}",
 		facultyStr, data.Faculty,
 		yearStr, data.YearOfEducation,
 		subjStr, data.Subject,
