@@ -25,3 +25,6 @@ func (h Handler) AuthorizeUser(c *gin.Context, userId int) {
 	h.SetTokenToCookies(c, authToken)
 }
 
+func (h Handler) LogOut(c *gin.Context) {
+	h.deleteCookies(c)
+}
