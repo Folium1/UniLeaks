@@ -61,6 +61,7 @@ func (r Repo) SaveFile(data models.LeakData) error {
 	if err != nil {
 		return err
 	}
+	log.Println("Done")
 	data.File.OpenedFile.Close()
 	return nil
 }
@@ -77,7 +78,7 @@ func (r Repo) GetList(data models.SubjectData) ([]*drive.File, error) {
 		isExamStr, strconv.FormatBool(data.IsExam),
 	)
 	// Define the fields that should be returned in the file list
-	fields := "files(id, name, description, size, likes, dislikes)"
+	fields := "files(id, name, description, size, properties)"
 	files, err := r.Service.Files.List().Q(query).Fields(googleapi.Field(fields)).Do()
 	if err != nil {
 		return nil, err
@@ -98,6 +99,7 @@ func (r Repo) GetFile(fileId string) ([]byte, error) {
 	return reader, nil
 }
 
+// LikeFile increments the number of likes for particular file
 func (r Repo) LikeFile(fileId string) error {
 	// Get the current like count from the file's properties field
 	file, err := r.Service.Files.Get(fileId).Fields("properties").Do()
@@ -122,6 +124,7 @@ func (r Repo) LikeFile(fileId string) error {
 	return nil
 }
 
+// LikeFile increments the number of dislikes for particular file
 func (r Repo) DislikeFile(fileId string) error {
 	// Get the current dislike count from the file's properties field
 	file, err := r.Service.Files.Get(fileId).Fields("properties").Do()

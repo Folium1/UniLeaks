@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"strconv"
 	"uniLeaks/leaks"
 	"uniLeaks/leaks/repository"
@@ -21,10 +22,12 @@ func (s Service) SaveFile(data models.LeakData) error {
 		return leaks.VirusDetectedErr
 	}
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	err = s.Repo.SaveFile(data)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -33,6 +36,7 @@ func (s Service) SaveFile(data models.LeakData) error {
 func (s Service) GetList(data models.SubjectData) ([]models.LeakData, error) {
 	files, err := s.Repo.GetList(data)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	filesList := make([]models.LeakData, len(files))
@@ -44,10 +48,12 @@ func (s Service) GetList(data models.SubjectData) ([]models.LeakData, error) {
 		file.File.Size = i.Size
 		file.UserData.Dislikes, err = strconv.Atoi(i.Properties["dislikes"])
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 		file.UserData.Likes, err = strconv.Atoi(i.Properties["likes"])
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 		filesList = append(filesList, file)
@@ -58,6 +64,7 @@ func (s Service) GetList(data models.SubjectData) ([]models.LeakData, error) {
 func (s Service) GetFile(fileId string) ([]byte, error) {
 	b, err := s.Repo.GetFile(fileId)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return b, nil
@@ -66,6 +73,7 @@ func (s Service) GetFile(fileId string) ([]byte, error) {
 func (s Service) DislikeFile(fileId string) error {
 	err := s.Repo.DislikeFile(fileId)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -74,6 +82,7 @@ func (s Service) DislikeFile(fileId string) error {
 func (s Service) LikeFile(fileId string) error {
 	err := s.Repo.LikeFile(fileId)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
