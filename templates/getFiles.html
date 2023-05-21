@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <form action="/leaks/get-files/" method="POST">
+        <label for="faculty">Faculty:</label>
+        <select id="faculty" name="faculty">
+            <option value="ForeignLanguages">Факультет іноземних мов</option>
+            <option value="faculty2">Faculty 2</option>
+            <option value="faculty3">Faculty 3</option>
+        </select>
+
+        <label for="edu_year">Year:</label>
+        <select id="edu_year" name="edu_year">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+
+        <label for="subject">Subject:</label>
+        <select id="subject" name="subject"></select>
+
+        <label for="module_num">Module:</label>
+        <select id="module_num" name="module_num">
+            <option value="1">1</option>
+            <option value="2">2</option>
+        </select>
+
+        <label for="is_module">Module Task:</label>
+        <input type="checkbox" id="is_module" name="is_module">
+
+        <label for="is_exam">Examen Task:</label>
+        <input type="checkbox" id="is_exam" name="is_exam">
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        const facultyDropdown = document.getElementById('faculty');
+        const subjectDropdown = document.getElementById('subject');
+        const moduleTaskCheckbox = document.getElementById('is_module');
+        const examenTaskCheckbox = document.getElementById('is_exam');
+
+        // Define the subjects for each faculty
+        const facultySubjects = {
+            ForeignLanguages: [
+                { name: 'Англійська лексика', value: 'eng-speak' },
+                { name: 'Англійське домашнє читання', value: 'eng-read' },
+                { name: 'Англійська граматика', value: 'eng-gram' },
+                { name: 'Англійська фонетика', value: 'eng-phon' },
+                { name: "Історія зарубіжної літератури", value: "izl" },
+                { name: "Німецька лексика", value: "ger-speak" },
+                { name: "Німецьке домашнє читання", value: "ger-read" },
+                { name: "Німецька граматика", value: "ger-gram" }
+            ],
+            faculty2: [
+                { name: 'Subject 4', value: 'subject4' },
+                { name: 'Subject 5', value: 'subject5' },
+                { name: 'Subject 6', value: 'subject6' }
+            ],
+            faculty3: [
+                { name: 'Subject 7', value: 'subject7' },
+                { name: 'Subject 8', value: 'subject8' },
+                { name: 'Subject 9', value: 'subject9' }
+            ]
+        };
+
+        // Update the subject options when the faculty selection changes
+        facultyDropdown.addEventListener('change', () => {
+            const selectedFaculty = facultyDropdown.value;
+
+            // Remove all existing options
+            subjectDropdown.innerHTML = '';
+
+            // Add the options for the selected faculty
+            facultySubjects[selectedFaculty].forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject.value;
+                option.textContent = subject.name;
+                subjectDropdown.appendChild(option);
+            });
+        });
+
+        // Make sure only one checkbox can be checked
+        moduleTaskCheckbox.addEventListener('click', () => {
+            examenTaskCheckbox.checked = false;
+        });
+
+        examenTaskCheckbox.addEventListener('click', () => {
+            moduleTaskCheckbox.checked = false;
+        });
+    </script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+</head>
+
+<body>
+    <h1>Загрузити файли</h1>
+    <form action="/leaks/upload-file" method="POST">
+        <label for="file-description">Опис файлу:</label>
+        <input type="text" id="file-description" name="description" rows="5" cols="50" maxlength="1000"></textarea><br>
+
+        <label for="edu_year">Курс:</label>
+        <input type="number" id="edu_year" name="edu_year" min="1" max="4"><br>
+
+        <label for="faculty">Факультет:</label>
+        <select id="faculty" name="faculty">
+            <option value="Foreign Languages">Факультет іноземних мов</option>
+        </select><br>
+
+        <label for="subject">Предмет:</label>
+        <select id="subject" name="subject">
+            <option value="eng-speak">Англійська лексика</option>
+        </select><br>
+
+        <label for="module-num">Модуль:</label>
+        <input type="number" id="module-num" name="module-num" min="1" max="2"><br>
+
+        <label for="file-upload">Файли:</label>
+        <input type="file" id="file-upload" name="file-upload" multiple><br>
+
+        <input type="submit" value="Submit">
+    </form>
+</body>
+
+</html>
