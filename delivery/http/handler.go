@@ -62,7 +62,7 @@ func (h Handler) handleLeaks() {
 		getFiles := leaks.Group("/get-files", Middleware.AuthAndRefreshMiddleware())
 		{
 			getFiles.GET("/", h.getFilesPage)
-			getFiles.POST("/", h.getFiles)
+			getFiles.POST("/", h.getFilesList)
 		}
 	}
 }

@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"errors"
-	"fmt"
 	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +42,7 @@ func (h Handler) uploadFile(c *gin.Context) {
 	data := models.LeakData{File: &models.File{}, Subject: &models.SubjectData{}, UserData: &models.UserFileData{}}
 	err := parseFileData(&data, c)
 	if err != nil {
-		responseWithErr(c, uploadPage, errors.New("The error has been occured while getting data from file"))
+		responseWithErr(c, uploadPage, errors.New("The error has been occured while getting data from the file"))
 		return
 	}
 	err = h.leakService.SaveFile(data)
@@ -62,7 +61,7 @@ func (h Handler) getFilesPage(c *gin.Context) {
 	}
 }
 
-func (h Handler) getFiles(c *gin.Context) {
+func (h Handler) getFilesList(c *gin.Context) {
 	var data models.SubjectData
 	err := parseSubjectData(&data, c)
 	if err != nil {
@@ -74,7 +73,6 @@ func (h Handler) getFiles(c *gin.Context) {
 		responseWithErr(c, ErrPage, errors.New("Internal server error"))
 		return
 	}
-	fmt.Println(files)
 	err = h.tmpl.ExecuteTemplate(c.Writer, "fileList.html", files)
 	if err != nil {
 		responseWithErr(c, ErrPage, errors.New("Internal server error"))

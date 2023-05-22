@@ -13,7 +13,6 @@ import (
 
 func parseFileData(data *models.LeakData, c *gin.Context) error {
 	// userId := c.MustGet("userId")
-	data.UserData.UserId = "2"
 	file, err := c.FormFile("file")
 	if err != nil {
 		return err
