@@ -17,16 +17,15 @@ type scanResult struct {
 	Result bool `json:"CleanResult"`
 }
 
-// scanFile checks file for viruses
-func scanFile(file *os.File) (bool, error) {
+// scanFile checks file for viruses, returns false, if virus has been detected
+func scanFile(file []byte) (bool, error) {
 	url := "https://api.cloudmersive.com/virus/scan/file"
 	method := "POST"
 
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
-	part1,
-		err := writer.CreateFormFile("inputFile", file.Name())
-	_, err = io.Copy(part1, file)
+	part1, err := writer.CreateFormFile("inputFile", "file")
+	_, err = io.Copy(part1, bytes.NewReader(file))
 	if err != nil {
 		log.Println(err)
 		return true, leaks.FileCheckErr
@@ -66,5 +65,6 @@ func scanFile(file *os.File) (bool, error) {
 		log.Println(err)
 		return true, err
 	}
+	log.Println("File scan result:", result.Result)
 	return result.Result, nil
 }

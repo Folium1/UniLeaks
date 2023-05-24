@@ -61,13 +61,19 @@ func (s Service) GetList(data models.SubjectData) ([]models.LeakData, error) {
 	return filesList, nil
 }
 
-func (s Service) GetFile(fileId string) ([]byte, error) {
-	b, err := s.Repo.GetFile(fileId)
+func (s Service) GetFile(fileId string) (models.LeakData, error) {
+	b, fileData, err := s.Repo.GetFile(fileId)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return models.LeakData{}, err
 	}
-	return b, nil
+	fileLeakData := models.File{
+		Id:         fileData.Id,
+		Name:       fileData.Name,
+		OpenedFile: b,
+	}
+	leaksData := models.LeakData{File: &fileLeakData, UserData: &models.UserFileData{}, Subject: &models.SubjectData{}}
+	return leaksData, nil
 }
 
 func (s Service) DislikeFile(fileId string) error {
@@ -86,4 +92,31 @@ func (s Service) LikeFile(fileId string) error {
 		return err
 	}
 	return nil
+}
+
+func (s Service) GetAllFiles() []models.LeakData {
+	files := s.Repo.GetAllFiles()
+	filesList := make([]models.LeakData, 0, len(files))
+	var err error
+	for _, f := range files {
+		file := &models.File{
+			Id:          f.Id,
+			Name:        f.Name,
+			Description: f.Description,
+			Size:        f.Size,
+		}
+		log.Println(file.Description, file.Id, file.Name, file.Size)
+		userData := &models.UserFileData{}
+		userData.Dislikes, err = strconv.Atoi(f.Properties["dislikes"])
+		if err != nil {
+			log.Fatal(err)
+		}
+		userData.Likes, err = strconv.Atoi(f.Properties["likes"])
+		if err != nil {
+			log.Fatal(err)
+		}
+		leakData := models.LeakData{File: file, UserData: userData, Subject: &models.SubjectData{}}
+		filesList = append(filesList, leakData)
+	}
+	return filesList
 }
