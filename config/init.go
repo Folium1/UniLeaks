@@ -69,18 +69,23 @@ func InitMYSQL() {
 
 type RedisConfig struct {
 	Addres   string
+	UserName string
 	Password string
-	DB       int
+	DB       string
 }
 
 func NewRedisConfig() *RedisConfig {
-	return &RedisConfig{os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), 0}
+	return &RedisConfig{os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_USERNAME"), os.Getenv("REDIS_PASSWORD"), os.Getenv("REDIS_DB")}
 }
 
 // NewRedisConfig creates a new Redis configuration object from environment variables
 func (r RedisConfig) ConnectToRedis() rueidis.Client {
 	client, err := rueidis.NewClient(rueidis.ClientOption{
 		InitAddress: []string{r.Addres},
+		// Username:     r.UserName,
+		Password:     r.Password,
+		SelectDB:     0,
+		DisableCache: true,
 	})
 	if err != nil {
 		log.Fatal(err)
