@@ -9,5 +9,6 @@ type Repository interface {
 	GetList(data models.SubjectData) ([]models.LeakData, error)
 	DislikeFile(fileId string) error
 	LikeFile(fileId string) error
-	GetFile(fileId string) ([]byte, error)
+	GetFile(fileId string) (models.LeakData, error)
+	GetAllFiles() []models.LeakData
 }
