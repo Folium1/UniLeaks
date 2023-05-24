@@ -1,7 +1,5 @@
 package models
 
-import "os"
-
 type LeakData struct {
 	File     *File
 	Subject  *SubjectData
@@ -9,12 +7,11 @@ type LeakData struct {
 }
 
 type File struct {
-	Id          string   `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Size        int64    `json:"size"`
-	UploadAt    int64    `json:"uploat_at_unix"`
-	OpenedFile  *os.File `json:"file"`
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Size        int64  `json:"size"`
+	OpenedFile  []byte `json:"file"`
 }
 
 type SubjectData struct {
