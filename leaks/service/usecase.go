@@ -1,103 +1,51 @@
 package service
 
 import (
-	"log"
+	"errors"
+	"runtime"
 	"strconv"
 	"uniLeaks/leaks"
-	"uniLeaks/leaks/repository"
 	"uniLeaks/models"
 )
 
 type Service struct {
-	Repo repository.Repo
+	Repo leaks.Repository
 }
 
-func New() leaks.Repository {
-	return Service{repository.New()}
-}
-
-func (s Service) SaveFile(data models.LeakData) error {
-	result, err := scanFile(data.File.OpenedFile)
-	if !result {
-		return leaks.VirusDetectedErr
+// New creates a new instance of the service.
+func New(repo leaks.Repository) *Service {
+	return &Service{
+		Repo: repo,
 	}
+}
+
+// SaveFile saves the file to the repository.
+func (s *Service) SaveFile(data *models.LeakData) error {
+	result, err := scanFile(data.File.Content)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
+	if !result {
+		return leaks.ErrVirusDetected
+	}
+
 	err = s.Repo.SaveFile(data)
 	if err != nil {
-		log.Println(err)
+		runtime.GC()
 		return err
 	}
+	runtime.GC()
 	return nil
 }
 
-func (s Service) GetList(data models.SubjectData) ([]models.LeakData, error) {
-	files, err := s.Repo.GetList(data)
+// FilesList retrieves a list of files based on subject data from the repository.
+func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) {
+	files, err := s.Repo.FilesList(data)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
-	filesList := make([]models.LeakData, len(files))
-	var file models.LeakData
-	for _, i := range files {
-		file.File.Name = i.Name
-		file.File.Description = i.Description
-		file.File.Id = i.Id
-		file.File.Size = i.Size
-		file.UserData.Dislikes, err = strconv.Atoi(i.Properties["dislikes"])
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		file.UserData.Likes, err = strconv.Atoi(i.Properties["likes"])
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		filesList = append(filesList, file)
-	}
-	return filesList, nil
-}
-
-func (s Service) GetFile(fileId string) (models.LeakData, error) {
-	b, fileData, err := s.Repo.GetFile(fileId)
-	if err != nil {
-		log.Println(err)
-		return models.LeakData{}, err
-	}
-	fileLeakData := models.File{
-		Id:         fileData.Id,
-		Name:       fileData.Name,
-		OpenedFile: b,
-	}
-	leaksData := models.LeakData{File: &fileLeakData, UserData: &models.UserFileData{}, Subject: &models.SubjectData{}}
-	return leaksData, nil
-}
-
-func (s Service) DislikeFile(fileId string) error {
-	err := s.Repo.DislikeFile(fileId)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (s Service) LikeFile(fileId string) error {
-	err := s.Repo.LikeFile(fileId)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (s Service) GetAllFiles() []models.LeakData {
-	files := s.Repo.GetAllFiles()
 	filesList := make([]models.LeakData, 0, len(files))
-	var err error
+	// Iterate over the files and create a list of LeakData
 	for _, f := range files {
 		file := &models.File{
 			Id:          f.Id,
@@ -105,18 +53,110 @@ func (s Service) GetAllFiles() []models.LeakData {
 			Description: f.Description,
 			Size:        f.Size,
 		}
-		log.Println(file.Description, file.Id, file.Name, file.Size)
-		userData := &models.UserFileData{}
-		userData.Dislikes, err = strconv.Atoi(f.Properties["dislikes"])
+		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		userData.Likes, err = strconv.Atoi(f.Properties["likes"])
+		likes, err := strconv.Atoi(f.Properties["likes"])
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		leakData := models.LeakData{File: file, UserData: userData, Subject: &models.SubjectData{}}
+		// Create a new file and user data
+		userData := &models.UserFileData{
+			Dislikes: dislikes,
+			Likes:    likes,
+		}
+		leakData := models.LeakData{
+			File:     file,
+			UserData: userData,
+			Subject:  &models.SubjectData{},
+		}
 		filesList = append(filesList, leakData)
 	}
-	return filesList
+
+	return filesList, nil
+}
+
+// File retrieves a specific file from the repository.
+func (s *Service) File(fileID string) (models.LeakData, error) {
+	// Check if the file exists
+	if fileID == "" {
+		return models.LeakData{}, leaks.ErrFileNotFound
+	}
+	// Retrieve the file from the repository
+	b, fileData, err := s.Repo.File(fileID)
+	if err != nil {
+		if errors.Is(err, leaks.ErrFileNotFound) {
+			return models.LeakData{}, leaks.ErrFileNotFound
+		}
+		return models.LeakData{}, err
+	}
+	// Create a new file and leak data
+	file := &models.File{
+		Id:      fileData.Id,
+		Name:    fileData.Name,
+		Content: b,
+	}
+	leakData := models.LeakData{
+		File:     file,
+		UserData: &models.UserFileData{},
+		Subject:  &models.SubjectData{},
+	}
+	runtime.GC()
+	return leakData, nil
+}
+
+// DislikeFile increments the dislike count of a file in the repository.
+func (s *Service) DislikeFile(fileID string) error {
+	err := s.Repo.DislikeFile(fileID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// LikeFile increments the like count of a file in the repository.
+func (s *Service) LikeFile(fileID string) error {
+	err := s.Repo.LikeFile(fileID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// AllFiles retrieves all files from the repository.
+func (s *Service) AllFiles() ([]models.LeakData, error) {
+	files, err := s.Repo.AllFiles()
+	if err != nil {
+		return nil, err
+	}
+	// Create a list of LeakData
+	filesList := make([]models.LeakData, 0, len(files))
+	for _, f := range files {
+		file := &models.File{
+			Id:          f.Id,
+			Name:        f.Name,
+			Description: f.Description,
+			Size:        f.Size,
+		}
+		userData := &models.UserFileData{}
+		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
+		if err != nil {
+			return nil, err
+		}
+		likes, err := strconv.Atoi(f.Properties["likes"])
+		if err != nil {
+			return nil, err
+		}
+		userData.Dislikes = dislikes
+		userData.Likes = likes
+		leakData := models.LeakData{
+			File:     file,
+			UserData: userData,
+			Subject:  &models.SubjectData{},
+		}
+		filesList = append(filesList, leakData)
+	}
+
+	return filesList, nil
 }
