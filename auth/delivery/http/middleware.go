@@ -22,10 +22,10 @@ func (h Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 		defer cancel()
 
 		// Get the auth token from cookies.
-		existedAuth, err := h.getAuthTokenFromCookies(c)
+		existedAuth, err := h.AuthTokenFromCookies(c)
 		if err != nil {
 			// If the auth token is missing, try to refresh the token using the refresh token.
-			refreshToken, err := h.getRefreshTokenFromCookies(c)
+			existedRefresh, err := h.RefreshTokenFromCookies(c)
 			if err != nil {
 				// If the refresh token is missing, redirect to the login page.
 				h.handleInvalidToken(http.StatusFound, c)
@@ -33,18 +33,18 @@ func (h Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 			}
 
 			// Get the user ID from the refresh token.
-			userId, err := h.useCase.GetUserId(ctx, refreshToken)
+			userId, err := h.useCase.UserId(ctx, existedRefresh)
 			if err != nil {
-				log.Println(err)
+				log.Println("Middleware: ", err)
 				h.handleInvalidToken(http.StatusFound, c)
 				return
 			}
 
 			// Generate a new auth token and save it.
-			newAuthToken := models.Token{TokenType: AuthtString, Value: h.generateToken(userId, AuthTokenDuration), Exp: AuthTokenDuration, UserId: userId}
+			newAuthToken := models.Token{TokenType: AuthString, Value: h.generateToken(userId, AuthTokenDuration), Exp: AuthTokenDuration, UserId: userId}
 			err = h.useCase.SaveToken(ctx, newAuthToken)
 			if err != nil {
-				log.Println(err)
+				log.Println("Middleware: ", err)
 				h.handleInvalidToken(http.StatusFound, c)
 				return
 			}
@@ -57,9 +57,9 @@ func (h Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 		}
 
 		// Get the user ID from the auth token.
-		userId, err := h.useCase.GetUserId(ctx, existedAuth)
+		userId, err := h.useCase.UserId(ctx, existedAuth)
 		if err != nil {
-			log.Println(err)
+			log.Println("Middleware: ", err)
 			h.handleInvalidToken(http.StatusFound, c)
 			return
 		}

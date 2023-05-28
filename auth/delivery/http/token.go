@@ -15,7 +15,7 @@ import (
 // Define constants for the cookie names
 const (
 	RefreshString = "Refresh"
-	AuthtString   = "Authorization"
+	AuthString    = "Authorization"
 )
 
 // Define global variables for token durations
@@ -26,14 +26,14 @@ var (
 
 // deleteCookies removes the authentication and refresh tokens from cookies.
 func (h Handler) deleteCookies(c *gin.Context) {
-	c.SetCookie(AuthtString, "", -1, "", "", false, false)
+	c.SetCookie(AuthString, "", -1, "", "", false, false)
 	c.SetCookie(RefreshString, "", -1, "", "", false, false)
 }
 
 // createAuthToken generates an authentication token for a given user ID.
 func (h Handler) createAuthToken(userId int) models.Token {
 	authToken := models.Token{
-		TokenType: AuthtString,
+		TokenType: AuthString,
 		Exp:       AuthTokenDuration,
 		UserId:    userId,
 	}
@@ -68,9 +68,9 @@ func (h Handler) generateToken(userId int, expire int) string {
 	return signedToken
 }
 
-// getTokenFromCookies gets the authentication or refresh token from cookies.
-func (h Handler) getTokenFromCookies(c *gin.Context) (models.Token, error) {
-	token, err := c.Cookie(AuthtString)
+// TokenFromCookies gets the authentication or refresh token from cookies.
+func (h Handler) TokenFromCookies(c *gin.Context) (models.Token, error) {
+	token, err := c.Cookie(AuthString)
 	if err != nil {
 		refreshToken, err := c.Cookie(RefreshString)
 		if err != nil {
@@ -80,27 +80,27 @@ func (h Handler) getTokenFromCookies(c *gin.Context) (models.Token, error) {
 
 		return token, nil
 	}
-	tk := models.Token{TokenType: AuthtString, Value: token}
+	tk := models.Token{TokenType: AuthString, Value: token}
 	return tk, nil
 }
 
-// getAuthTokenFromCookies retrieves the authentication token from cookies in the context.
+// AuthTokenFromCookies retrieves the authentication token from cookies in the context.
 // If there is an error retrieving the token or the token is empty, it returns an error.
-// Otherwise, it splits the token to get the value and returns a Token object with TokenType "AuthtString".
-func (h Handler) getAuthTokenFromCookies(c *gin.Context) (models.Token, error) {
-	cookieToken, err := c.Cookie(AuthtString)
+// Otherwise, it splits the token to get the value and returns a Token object with TokenType "AuthString".
+func (h Handler) AuthTokenFromCookies(c *gin.Context) (models.Token, error) {
+	cookieToken, err := c.Cookie(AuthString)
 	if err != nil || cookieToken == "" {
 		return models.Token{}, err
 	}
 	tokenValue := strings.Split(cookieToken, " ")[1]
-	authToken := models.Token{TokenType: AuthtString, Value: tokenValue}
+	authToken := models.Token{TokenType: AuthString, Value: tokenValue}
 	return authToken, nil
 }
 
-// getRefreshTokenFromCookies retrieves the refresh token from cookies in the context.
+// RefreshTokenFromCookies retrieves the refresh token from cookies in the context.
 // If there is an error retrieving the token or the token is empty, it returns an error.
 // Otherwise, it splits the token to get the value and returns a Token object with TokenType "RefreshString".
-func (h Handler) getRefreshTokenFromCookies(c *gin.Context) (models.Token, error) {
+func (h Handler) RefreshTokenFromCookies(c *gin.Context) (models.Token, error) {
 	cookieToken, err := c.Cookie(RefreshString)
 	if err != nil || cookieToken == "" {
 		return models.Token{}, err
@@ -110,13 +110,13 @@ func (h Handler) getRefreshTokenFromCookies(c *gin.Context) (models.Token, error
 	return authToken, nil
 }
 
-// getUserId gets the user ID from the given token using the GetUserId function.
+// UserId gets the user ID from the given token using the UserId function.
 // It returns the user ID and any error encountered during the retrieval process.
-func (h Handler) getUserId(tk models.Token) (int, error) {
+func (h Handler) UserId(tk models.Token) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	userId, err := h.useCase.GetUserId(ctx, tk)
+	userId, err := h.useCase.UserId(ctx, tk)
 	if err != nil {
 		return -1, err
 	}
