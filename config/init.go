@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Init initializes the environment variables
 func init() {
 	err := godotenv.Load()
 	if err != nil {
@@ -24,6 +25,7 @@ func init() {
 	}
 }
 
+// NewDriveClient creates a new Google Drive client
 func NewDriveClient() (*drive.Service, error) {
 	key, err := ioutil.ReadFile("leaks-386216-becb63cca935.json")
 	if err != nil {
@@ -42,7 +44,7 @@ func NewDriveClient() (*drive.Service, error) {
 	return service, nil
 }
 
-// MysqlConn connects to mysql, logs if error has occured
+// MysqlConn creates a new MySQL connection
 func MysqlConn() (*gorm.DB, error) {
 	mysqlConn := os.Getenv("MYSQL")
 	db, err := gorm.Open(mysql.New(mysql.Config{
@@ -61,19 +63,21 @@ func InitMYSQL() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Create tables
 	err = db.AutoMigrate(models.User{})
 	if err != nil {
-		log.Fatal("Couldn't migrate mysql, err = ", err)
+		log.Fatal("Couldn't migrate mysql table, err = ", err)
 	}
 }
 
 type RedisConfig struct {
-	Addres   string
+	Address  string
 	UserName string
 	Password string
 	DB       string
 }
 
+// NewRedisConfig creates a new Redis configuration object from environment variables
 func NewRedisConfig() *RedisConfig {
 	return &RedisConfig{os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_USERNAME"), os.Getenv("REDIS_PASSWORD"), os.Getenv("REDIS_DB")}
 }
@@ -81,8 +85,7 @@ func NewRedisConfig() *RedisConfig {
 // NewRedisConfig creates a new Redis configuration object from environment variables
 func (r RedisConfig) ConnectToRedis() rueidis.Client {
 	client, err := rueidis.NewClient(rueidis.ClientOption{
-		InitAddress: []string{r.Addres},
-		// Username:     r.UserName,
+		InitAddress:  []string{r.Address},
 		Password:     r.Password,
 		SelectDB:     0,
 		DisableCache: true,
