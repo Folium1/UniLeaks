@@ -34,8 +34,8 @@ func New() Handler {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/templates/static", "/")
-	newUserHandler := user.New(r, tmpl)
-	leaksHandler := leaksHandler.New(r, tmpl)
+	newUserHandler := user.New(tmpl)
+	leaksHandler := leaksHandler.New(tmpl)
 	return Handler{tmpl: tmpl, leaks: leaksHandler, user: &newUserHandler, router: r}
 }
 
