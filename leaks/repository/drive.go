@@ -17,6 +17,7 @@ import (
 
 // Constants for the Google Drive file properties keys
 const (
+	userIdStr    = "user_id"
 	subjStr      = "subject"
 	facultyStr   = "faculty"
 	yearStr      = "year"
@@ -43,12 +44,11 @@ func New() *Repo {
 }
 
 // SaveFile is a function that saves a new file to Google Drive with the provided LeakData.
-func (r Repo) SaveFile(data *models.LeakData) error {
+func (r *Repo) SaveFile(data *models.LeakData) error {
 	// Create a new file with the provided data
 	driveFile := &drive.File{
 		Name: data.File.Name,
 		Properties: map[string]string{
-			"userId":     data.UserData.UserId,
 			subjStr:      data.Subject.Subject,
 			facultyStr:   data.Subject.Faculty,
 			yearStr:      fmt.Sprintf("%v", data.Subject.YearOfEducation),
@@ -57,6 +57,7 @@ func (r Repo) SaveFile(data *models.LeakData) error {
 			isExamStr:    strconv.FormatBool(data.Subject.IsExam),
 			isModuleStr:  strconv.FormatBool(data.Subject.IsModuleTask),
 
+			userIdStr:  data.UserData.UserId,
 			likeStr:    "0",
 			dislikeStr: "0",
 		},
@@ -71,32 +72,28 @@ func (r Repo) SaveFile(data *models.LeakData) error {
 	data.File.Content = nil
 	runtime.GC()
 
-	log.Println("Done")
 	return nil
 }
 
 // buildQuery creates a query for searching files in Google Drive.
 func buildQuery(data models.SubjectData) string {
 	builder := strings.Builder{}
-	builder.Write([]byte(" "))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", facultyStr, data.Faculty)))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", yearStr, data.YearOfEducation)))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", semesterStr, fmt.Sprintf("%v", data.Semester))))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", subjStr, data.Subject)))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", moduleNumStr, fmt.Sprintf("%v", data.ModuleNum))))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", isModuleStr, strconv.FormatBool(data.IsModuleTask))))
-	builder.Write([]byte(fmt.Sprintf("properties has {key='%s' and value='%s'}", isExamStr, strconv.FormatBool(data.IsExam))))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%s'} and ", facultyStr, data.Faculty))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%s'} and ", yearStr, data.YearOfEducation))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%v'} and ", semesterStr, data.Semester))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%s'} and ", subjStr, data.Subject))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%v'} and ", moduleNumStr, data.ModuleNum))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%t'} and ", isModuleStr, data.IsModuleTask))
+	builder.WriteString(fmt.Sprintf("properties has {key='%s' and value='%t'}", isExamStr, data.IsExam))
 	return builder.String()
 }
 
 // FilesList returns a list of files from Google Drive that match the provided LeakData.
-func (r Repo) FilesList(data models.SubjectData) ([]*drive.File, error) {
+func (r *Repo) FilesList(data models.SubjectData) ([]*drive.File, error) {
 	// Build the query for searching files
 	query := buildQuery(data)
-	// Define the fields that should be returned in the file list
-	fields := "files(id, name, description, size, properties)"
 	// Get the list of files from Google Drive
-	files, err := r.driveService.Files.List().Q(query).Fields(googleapi.Field(fields)).Do()
+	files, err := r.driveService.Files.List().Q(query).Fields("files(id, name, description, size, properties)").Do()
 	if err != nil {
 		return nil, err
 	}
@@ -104,10 +101,9 @@ func (r Repo) FilesList(data models.SubjectData) ([]*drive.File, error) {
 }
 
 // File returns file by its id
-func (r Repo) File(fileID string) ([]byte, *drive.File, error) {
+func (r *Repo) File(fileID string) ([]byte, *drive.File, error) {
 	// Get the file metadata
-	fields := "name, description, size, properties"
-	fileData, err := r.driveService.Files.Get(fileID).Fields(googleapi.Field(fields)).Do()
+	fileData, err := r.driveService.Files.Get(fileID).Fields("name, description, size, properties").Do()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,7 +125,7 @@ func (r Repo) File(fileID string) ([]byte, *drive.File, error) {
 }
 
 // LikeFile increments the number of likes for particular file
-func (r Repo) LikeFile(fileId string) error {
+func (r *Repo) LikeFile(fileId string) error {
 	// Get the current like count from the file's properties field
 	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
 	if err != nil {
@@ -154,7 +150,7 @@ func (r Repo) LikeFile(fileId string) error {
 }
 
 // LikeFile increments the number of dislikes for particular file
-func (r Repo) DislikeFile(fileId string) error {
+func (r *Repo) DislikeFile(fileId string) error {
 	// Get the current dislike count from the file's properties field
 	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
 	if err != nil {
@@ -182,7 +178,7 @@ func (r Repo) DislikeFile(fileId string) error {
 }
 
 // AllFiles returns all files from Google Drive
-func (r Repo) AllFiles() ([]*drive.File, error) {
+func (r *Repo) AllFiles() ([]*drive.File, error) {
 	fields := "files(id, description, name, size, properties)"
 	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q("").Do()
 	if err != nil {
@@ -191,3 +187,24 @@ func (r Repo) AllFiles() ([]*drive.File, error) {
 	}
 	return files.Files, nil
 }
+
+// MyFiles returns all files uploaded by the user
+func (r *Repo) MyFiles(userId string) ([]*drive.File, error) {
+	fields := "files(id, description, name, size, properties)"
+	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q(fmt.Sprintf("properties has {key='%s' and value='%s'}", userIdStr, userId)).Do()
+	if err != nil {
+		log.Printf("Failed to retrieve files by custom properties: %v", err)
+		return nil, err
+	}
+	return files.Files, nil
+}
+
+// DeleteFile deletes a file from Google Drive
+func (r *Repo) DeleteFile(fileId string) error {
+	err := r.driveService.Files.Delete(fileId).Do()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
