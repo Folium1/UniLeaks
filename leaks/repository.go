@@ -2,13 +2,15 @@ package leaks
 
 import (
 	"uniLeaks/models"
+
+	"google.golang.org/api/drive/v3"
 )
 
 type Repository interface {
-	SaveFile(data models.LeakData) error
-	GetList(data models.SubjectData) ([]models.LeakData, error)
+	SaveFile(data *models.LeakData) error
+	FilesList(data models.SubjectData) ([]*drive.File, error)
 	DislikeFile(fileId string) error
 	LikeFile(fileId string) error
-	GetFile(fileId string) (models.LeakData, error)
-	GetAllFiles() []models.LeakData
+	File(fileId string) ([]byte, *drive.File, error)
+	AllFiles() ([]*drive.File, error)
 }
