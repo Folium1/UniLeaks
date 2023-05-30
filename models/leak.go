@@ -11,13 +11,14 @@ type File struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Size        int64  `json:"size"`
-	OpenedFile  []byte `json:"file"`
+	Content  []byte `json:"file"`
 }
 
 type SubjectData struct {
 	Faculty         string `json:"faculty"`
 	Subject         string `json:"subject"`
 	YearOfEducation string `json:"edu_year"`
+	Semester        uint64 `json:"semester"`
 	ModuleNum       uint64 `json:"module"`
 	IsModuleTask    bool   `json:"is_module"`
 	IsExam          bool   `json:"is_exam"`

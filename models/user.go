@@ -6,4 +6,5 @@ type User struct {
 	Email    string `gorm:"type:varchar(100);unique" json:"email"`
 	Password string `gorm:"type:varchar(200)" json:"password"`
 	IsBanned bool   `gorm:"type:bool" json:"banned"`
+	IsAdmin  bool   `gorm:"type:bool" json:"admin"`
 }
