@@ -21,7 +21,7 @@ func New(repo leaks.Repository) *Service {
 
 // SaveFile saves the file to the repository.
 func (s *Service) SaveFile(data *models.LeakData) error {
-	result, err := scanFile(data.File.Content)
+	result, err := scanFile(&data.File.Content)
 	if err != nil {
 		return err
 	}
