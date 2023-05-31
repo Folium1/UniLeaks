@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"uniLeaks/models"
 	"uniLeaks/user"
@@ -47,14 +46,4 @@ func (u UserUseCase) GetByMail(ctx context.Context, mail string) (models.User, e
 		return models.User{}, errors.New("Couldn't get user, by mail")
 	}
 	return user, nil
-}
-
-// BanUser bans the user with the given id.
-func (u UserUseCase) BanUser(ctx context.Context, id int) error {
-	err := u.repo.BanUser(ctx, id)
-	if err != nil {
-		log.Println(err)
-		return fmt.Errorf("Couldn't ban user with id:%v", id)
-	}
-	return nil
 }
