@@ -52,7 +52,7 @@ func (r Repo) DeleteToken(ctx context.Context, token models.Token) error {
 	return nil
 }
 
-// GetUserId returns the user ID associated with the given token from Redis.
+// UserId returns the user ID associated with the given token from Redis.
 func (r Repo) UserId(ctx context.Context, token models.Token) (int, error) {
 	db := r.db.ConnectToRedis()
 	defer db.Close()
