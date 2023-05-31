@@ -2,7 +2,7 @@ package main
 
 import (
 	"uniLeaks/config"
-	delivery "uniLeaks/delivery/http"
+	delivery "uniLeaks/delivery"
 )
 
 func main() {
