@@ -13,4 +13,5 @@ type Repository interface {
 	LikeFile(fileId string) error
 	File(fileId string) ([]byte, *drive.File, error)
 	AllFiles() ([]*drive.File, error)
+	MyFiles(userId string) ([]*drive.File, error)
 }
