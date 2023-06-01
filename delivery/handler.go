@@ -33,7 +33,10 @@ func New() Handler {
 	tmpl := template.Must(template.ParseGlob("templates/*"))
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
-	r.Static("/templates/static", "/")
+	// Load and parse the header template
+	headerTemplate := template.Must(template.ParseFiles("templates/header.html"))
+	// Set the template engine to use the parsed templates
+	r.SetHTMLTemplate(headerTemplate)
 	newUserHandler := user.New(tmpl)
 	leaksHandler := leaksHandler.New(tmpl)
 	return Handler{tmpl: tmpl, leaks: leaksHandler, user: &newUserHandler, router: r}
@@ -47,15 +50,16 @@ func (h *Handler) handleUsers() {
 		userGroup.GET("/login", h.user.Login)
 		userGroup.POST("/register", h.user.PostRegister)
 		userGroup.POST("/login", h.user.PostLogin)
+		userGroup.GET("/logOut", h.user.LogOut)
 	}
 }
 
 // handleLeaks handles the leaks routes
 func (h *Handler) handleLeaks() {
-	leaks := h.router.Group("/leaks")
+	leaks := h.router.Group("/leaks", middleware.AuthAndRefreshMiddleware())
 	{
 		leaks.GET("/", h.leaks.MainPage)
-		download := leaks.Group("/download", middleware.AuthAndRefreshMiddleware())
+		download := leaks.Group("/download")
 		{
 			download.GET("/:id", h.leaks.DownloadFile)
 		}
@@ -64,12 +68,15 @@ func (h *Handler) handleLeaks() {
 			uploadFiles.GET("/upload-files", h.leaks.UploadFilePage)
 			uploadFiles.POST("/upload-files", h.leaks.UploadFile)
 		}
-		getFiles := leaks.Group("/get-files", middleware.AuthAndRefreshMiddleware())
+		getFiles := leaks.Group("/get-files")
 		{
 			getFiles.GET("/", h.leaks.FilesPage)
 			getFiles.POST("/", h.leaks.FilesList)
 			getFiles.GET("/all", h.leaks.AllFiles)
-
+		}
+		myFiles := leaks.Group("/my-files")
+		{
+			myFiles.GET("/", h.leaks.MyFiles)
 		}
 	}
 }
