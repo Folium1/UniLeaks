@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"errors"
-	"net/http"
+	"html/template"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,11 +10,11 @@ import (
 const ErrPage = "errPage.html"
 
 var (
-	ServerErr = errors.New("Помилка на сервері, спробуйте ще раз")
+	ServerErr       = errors.New("Помилка на сервері, спробуйте ще раз")
+	FileReceivedErr = errors.New("Помилка отримання файлу, спробуйте ще раз")
 )
 
-// responseWithErr gives a response to user with code 400, in the given page and error message
-func ResponseWithErr(c *gin.Context, template string, err error) {
-	c.HTML(http.StatusBadRequest, template,
-		gin.H{"Error": err})
+// ResponseWithErr gives a response to user with code 400, in the given page and error message
+func ResponseWithErr(c *gin.Context, t *template.Template, template string, err error) {
+	t.ExecuteTemplate(c.Writer, template, err)
 }
