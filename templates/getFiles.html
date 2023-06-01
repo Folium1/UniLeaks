@@ -5,20 +5,86 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>DL | Скачати файли</title>
+    <style>
+        h1 {
+            text-align: center;
+            color: #45668e;
+            margin-top: 60px;
+        }
+
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #eef0f1;
+            padding-top: 60px;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px #888;
+            margin: 0 auto;
+            width: 400px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #45668e;
+            font-weight: bold;
+        }
+
+        label span {
+            margin-left: 5px;
+        }
+
+        select,
+        input[type="checkbox"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #d8d9dc;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            margin-right: 0;
+            color: #1c1e21;
+        }
+
+        button[type="submit"] {
+            background-color: #4b76a5;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+
 </head>
 
 <body>
-
+    {{ template "header" }}
+    <h1>Скачати файли</h1>
     <form action="/leaks/get-files/" method="POST">
-        <label for="faculty">Faculty:</label>
+        <label for="faculty">Факультет:</label>
         <select id="faculty" name="faculty">
+            <option value="----">- - - - -</option>
             <option value="ForeignLanguages">Факультет іноземних мов</option>
             <option value="faculty2">Faculty 2</option>
             <option value="faculty3">Faculty 3</option>
         </select>
 
-        <label for="edu_year">Year:</label>
+        <label for="subject">Предмет:</label>
+        <select id="subject" name="subject"></select>
+
+        <label for="edu_year">Рік навчання:</label>
         <select id="edu_year" name="edu_year">
             <option value="1">1</option>
             <option value="2">2</option>
@@ -26,22 +92,27 @@
             <option value="4">4</option>
         </select>
 
-        <label for="subject">Subject:</label>
-        <select id="subject" name="subject"></select>
-
-        <label for="module_num">Module:</label>
-        <select id="module_num" name="module_num">
+        <label for="semester">Семестр:</label>
+        <select id="semester" required name="semester">
             <option value="1">1</option>
             <option value="2">2</option>
-        </select>
+        </select><br>
 
-        <label for="is_module">Module Task:</label>
+        <label for="module_num">Модуль:</label>
+        <select id="module_num" required name="module_num">
+            <option value="1">1</option>
+            <option value="2">2</option>
+        </select><br>
+
+        <label for="is_module">Модульне завдання</label>
         <input type="checkbox" id="is_module" name="is_module">
-
-        <label for="is_exam">Examen Task:</label>
+        <br>
+        <label for="is_exam">Екзаменаційне завдання:</label>
         <input type="checkbox" id="is_exam" name="is_exam">
+        <br>
 
-        <button type="submit">Submit</button>
+
+        <button style="margin-top: 0;" type="submit">Отримати</button>
     </form>
 
     <script>
@@ -52,6 +123,9 @@
 
         // Define the subjects for each faculty
         const facultySubjects = {
+            "----": [
+                { name: '----', value: '----' }
+            ],
             ForeignLanguages: [
                 { name: 'Англійська лексика', value: 'eng-speak' },
                 { name: 'Англійське домашнє читання', value: 'eng-read' },
@@ -62,16 +136,6 @@
                 { name: "Німецьке домашнє читання", value: "ger-read" },
                 { name: "Німецька граматика", value: "ger-gram" }
             ],
-            faculty2: [
-                { name: 'Subject 4', value: 'subject4' },
-                { name: 'Subject 5', value: 'subject5' },
-                { name: 'Subject 6', value: 'subject6' }
-            ],
-            faculty3: [
-                { name: 'Subject 7', value: 'subject7' },
-                { name: 'Subject 8', value: 'subject8' },
-                { name: 'Subject 9', value: 'subject9' }
-            ]
         };
 
         // Update the subject options when the faculty selection changes
@@ -99,9 +163,6 @@
             moduleTaskCheckbox.checked = false;
         });
     </script>
-
-
-
 </body>
 
 </html>
