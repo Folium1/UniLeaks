@@ -7,11 +7,11 @@ import (
 )
 
 type Repository interface {
-	SaveFile(data *models.LeakData) error
+	SaveFile(data models.LeakData) error
 	FilesList(data models.SubjectData) ([]*drive.File, error)
 	DislikeFile(fileId string) error
 	LikeFile(fileId string) error
-	File(fileId string) ([]byte, *drive.File, error)
+	File(fileID string) ([]byte, drive.File, error)
 	AllFiles() ([]*drive.File, error)
 	MyFiles(userId string) ([]*drive.File, error)
 }
