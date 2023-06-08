@@ -5,7 +5,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	authHttp "uniLeaks/auth/delivery/http"
+	auth "uniLeaks/auth"
+	admin "uniLeaks/delivery/admin"
 	leaksHandler "uniLeaks/delivery/leaks"
 	user "uniLeaks/delivery/user"
 
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	middleware = authHttp.New()
+	middleware = auth.New()
 )
 
 type subjects struct {
@@ -25,6 +26,7 @@ type Handler struct {
 	tmpl   *template.Template
 	leaks  *leaksHandler.LeaksHandler
 	user   *user.UserHandler
+	admin  *admin.AdminHandler
 	router *gin.Engine
 }
 
@@ -39,7 +41,8 @@ func New() Handler {
 	r.SetHTMLTemplate(headerTemplate)
 	newUserHandler := user.New(tmpl)
 	leaksHandler := leaksHandler.New(tmpl)
-	return Handler{tmpl: tmpl, leaks: leaksHandler, user: &newUserHandler, router: r}
+	adminHandler := admin.New(tmpl)
+	return Handler{tmpl: tmpl, leaks: leaksHandler, user: newUserHandler, admin: adminHandler, router: r}
 }
 
 // handleUsers handles the user routes
@@ -81,10 +84,22 @@ func (h *Handler) handleLeaks() {
 	}
 }
 
+// handleAdmin handles the admin routes
+func (h *Handler) handleAdmin() {
+	admin := h.router.Group("/admin", middleware.AuthAndRefreshMiddleware(), middleware.IsAdmin())
+	{
+		admin.GET("/", h.admin.MainPage)
+		admin.GET("/files", h.admin.FilesList)
+		admin.GET("/file/:id", h.admin.DownloadFile)
+		admin.DELETE("/file/:id", h.admin.DeleteFile)
+	}
+}
+
 // StartServer runs the server
 func (h *Handler) StartServer() {
 	h.handleUsers()
 	h.handleLeaks()
+	h.handleAdmin()
 	server := &http.Server{
 		Addr:    ":8080",
 		Handler: h.router,
