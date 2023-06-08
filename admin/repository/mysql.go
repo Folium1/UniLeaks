@@ -27,6 +27,7 @@ func NewUserRepository() *UserRepo {
 func (r *UserRepo) BanUser(ctx context.Context, id int) error {
 	result := r.db.WithContext(ctx).Set("is_banned", true).Where("id = %v", id)
 	if result.Error != nil {
+		log.Println(result.Error)
 		return result.Error
 	}
 	return nil
@@ -41,6 +42,7 @@ func (r *UserRepo) AllUsers(ctx context.Context) ([]*models.User, error) {
 	var users []*models.User
 	result := db.WithContext(ctx).Find(&users)
 	if result.Error != nil {
+		log.Println(err)
 		return nil, result.Error
 	}
 	return users, nil
@@ -51,6 +53,7 @@ func (r *UserRepo) IsAdmin(ctx context.Context, id int) (bool, error) {
 	var user models.User
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&user)
 	if result.Error != nil {
+		log.Println(result.Error)
 		return false, result.Error
 	}
 	return user.IsAdmin, nil
