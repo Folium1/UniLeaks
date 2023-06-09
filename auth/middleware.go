@@ -2,10 +2,10 @@ package delivery
 
 import (
 	"errors"
-	"log"
+	"fmt"
+	errHandler "leaks/err"
+	"leaks/models"
 	"net/http"
-	errHandler "uniLeaks/err"
-	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +23,7 @@ func (h *Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 			// If the auth token is missing, try to refresh the token using the refresh token.
 			existedRefresh, err := h.refreshTokenFromCookies(ctx)
 			if err != nil {
-				log.Println("Middleware: ", err)
+				logg.Error(fmt.Sprint("Middleware: ", err))
 				// If the refresh token is missing, redirect to the login page.
 				h.handleInvalidToken(http.StatusFound, ctx)
 				return
@@ -31,7 +31,7 @@ func (h *Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 
 			userId, err := h.validateToken(existedRefresh)
 			if err != nil {
-				log.Println("Middleware: ", err)
+				logg.Error(fmt.Sprint("Middleware: ", err))
 				// If the refresh token is invalid, redirect to the login page.
 				h.handleInvalidToken(http.StatusFound, ctx)
 				return
@@ -49,7 +49,7 @@ func (h *Handler) AuthAndRefreshMiddleware() gin.HandlerFunc {
 		// If the auth token is present, validate it. If it is invalid, redirect to the login page. Otherwise, set the user ID in the context and proceed to the next middleware.
 		userId, err := h.validateToken(existedAuth)
 		if err != nil {
-			log.Println("Middleware: ", err)
+			logg.Error(fmt.Sprint("Middleware: ", err))
 			h.handleInvalidToken(http.StatusFound, ctx)
 			return
 		}
@@ -63,15 +63,18 @@ func (h *Handler) IsAdmin() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userId, ok := ctx.Get("userId")
 		if !ok {
-			errHandler.ResponseWithErr(ctx, h.tmpl, errHandler.ErrPage, errors.New("Помилка отримання данних"))
+			logg.Error(fmt.Sprint("Middleware: ", "No user id in context"))
+			errHandler.ResponseWithErr(ctx, h.tmpl, errHandler.ErrPage, errors.New("Помилка перевірки доступу"))
 			return
 		}
 		isAdmin, err := h.userService.IsAdmin(userId.(int))
 		if err != nil {
-			errHandler.ResponseWithErr(ctx, h.tmpl, errHandler.ErrPage, errors.New("Помилка отримання данних"))
+			logg.Error(fmt.Sprint("Middleware: ", err))
+			errHandler.ResponseWithErr(ctx, h.tmpl, errHandler.ErrPage, errors.New("Помилка перевірки доступу"))
 			return
 		}
 		if !isAdmin {
+			logg.Error(fmt.Sprint("Middleware: ", "User is not admin"))
 			errHandler.ResponseWithErr(ctx, h.tmpl, errHandler.ErrPage, errors.New("Недостатньо прав"))
 			return
 		}

@@ -2,8 +2,11 @@ package delivery
 
 import (
 	"html/template"
-	userAdmin "uniLeaks/admin/service"
+	userAdmin "leaks/admin/service"
+	"leaks/logger"
 )
+
+var logg = logger.NewLogger()
 
 type Handler struct {
 	tmpl        *template.Template

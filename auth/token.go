@@ -2,10 +2,10 @@ package delivery
 
 import (
 	"fmt"
+	"leaks/models"
 	"log"
 	"os"
 	"strings"
-	"uniLeaks/models"
 
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/gin-gonic/gin"
