@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
-	"runtime"
 	"strconv"
 	"strings"
-	"uniLeaks/config"
-	"uniLeaks/models"
+
+	"leaks/config"
+	"leaks/logger"
+	"leaks/models"
 
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
@@ -30,6 +30,8 @@ const (
 	dislikeStr   = "dislikes"
 )
 
+var logg = logger.NewLogger()
+
 type Repo struct {
 	driveService *drive.Service
 }
@@ -38,7 +40,7 @@ type Repo struct {
 func New() *Repo {
 	dr, err := config.NewDriveClient()
 	if err != nil {
-		log.Println(err)
+		logg.Fatal(fmt.Sprint("Couldn't create a new drive client, err:", err))
 	}
 	return &Repo{dr}
 }
@@ -67,11 +69,10 @@ func (r *Repo) SaveFile(data models.LeakData) error {
 	contentReader := bytes.NewReader(data.File.Content)
 	_, err := r.driveService.Files.Create(driveFile).Media(contentReader).Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't create a new file, err:", err))
 		return err
 	}
 	data.File.Content = nil
-	runtime.GC()
-
 	return nil
 }
 
@@ -95,6 +96,7 @@ func (r *Repo) FilesList(data models.SubjectData) ([]*drive.File, error) {
 	// Get the list of files from Google Drive
 	files, err := r.driveService.Files.List().Q(query).Fields("files(id, name, description, size, properties)").Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
 	}
 	return files.Files, nil
@@ -105,11 +107,13 @@ func (r *Repo) File(fileID string) ([]byte, drive.File, error) {
 	// Get the file metadata
 	fileData, err := r.driveService.Files.Get(fileID).Fields("name, description, size, properties").Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
 		return nil, drive.File{}, err
 	}
 	// Get the file content
 	res, err := r.driveService.Files.Get(fileID).Download()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get file content, err:", err))
 		return nil, drive.File{}, err
 	}
 	defer res.Body.Close()
@@ -118,6 +122,7 @@ func (r *Repo) File(fileID string) ([]byte, drive.File, error) {
 	buffer := bytes.Buffer{}
 	_, err = io.Copy(&buffer, res.Body)
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't copy file content, err:", err))
 		return nil, drive.File{}, err
 	}
 	return buffer.Bytes(), *fileData, nil
@@ -128,10 +133,15 @@ func (r *Repo) LikeFile(fileId string) error {
 	// Get the current like count from the file's properties field
 	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
 		return err
 	}
 	likeStr := file.Properties[likeStr]
-	likeCount, _ := strconv.Atoi(likeStr)
+	likeCount, err := strconv.Atoi(likeStr)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't convert like count to int, err:", err))
+		return err
+	}
 
 	// Increment the like count and update the properties field of the file
 	likeCount++
@@ -143,6 +153,7 @@ func (r *Repo) LikeFile(fileId string) error {
 	}
 	_, err = r.driveService.Files.Update(fileId, &update).Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't update file data, err:", err))
 		return err
 	}
 	return nil
@@ -153,11 +164,13 @@ func (r *Repo) DislikeFile(fileId string) error {
 	// Get the current dislike count from the file's properties field
 	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
 		return err
 	}
 	dislikesStr := file.Properties[dislikeStr]
 	dislikes, err := strconv.Atoi(dislikesStr)
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't convert dislike count to int, err:", err))
 		return err
 	}
 
@@ -171,6 +184,7 @@ func (r *Repo) DislikeFile(fileId string) error {
 	}
 	_, err = r.driveService.Files.Update(fileId, &update).Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't update file data, err:", err))
 		return err
 	}
 	return nil
@@ -181,7 +195,7 @@ func (r *Repo) AllFiles() ([]*drive.File, error) {
 	fields := "files(id, description, name, size, properties)"
 	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q("").Do()
 	if err != nil {
-		log.Printf("Failed to retrieve files by custom properties: %v", err)
+		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
 	}
 	return files.Files, nil
@@ -192,7 +206,7 @@ func (r *Repo) MyFiles(userId string) ([]*drive.File, error) {
 	fields := "files(id, description, name, size, properties)"
 	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q(fmt.Sprintf("properties has {key='%s' and value='%s'}", userIdStr, userId)).Do()
 	if err != nil {
-		log.Printf("Failed to retrieve files by custom properties: %v", err)
+		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
 	}
 	return files.Files, nil
@@ -202,6 +216,7 @@ func (r *Repo) MyFiles(userId string) ([]*drive.File, error) {
 func (r *Repo) DeleteFile(fileId string) error {
 	err := r.driveService.Files.Delete(fileId).Do()
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't delete file, err:", err))
 		return err
 	}
 	return nil

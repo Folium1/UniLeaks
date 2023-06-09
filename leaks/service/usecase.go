@@ -2,11 +2,15 @@ package service
 
 import (
 	"errors"
-	"runtime"
+	"fmt"
+	errHandler "leaks/err"
+	"leaks/leaks"
+	"leaks/logger"
+	"leaks/models"
 	"strconv"
-	"uniLeaks/leaks"
-	"uniLeaks/models"
 )
+
+var logg = logger.NewLogger()
 
 type Service struct {
 	repo leaks.Repository
@@ -23,18 +27,19 @@ func New(repo leaks.Repository) *Service {
 func (s *Service) SaveFile(data models.LeakData) error {
 	result, err := scanFile(data.File.Content)
 	if err != nil {
-		return err
+		logg.Error(fmt.Sprint("Couldn't scan file: ", err))
+		return errHandler.FileCheckErr
 	}
 	if !result {
-		return leaks.ErrVirusDetected
+		logg.Error(fmt.Sprintf("Virus detected, uploaded by: %v", data.UserData.UserId))
+		return errHandler.VirusDetectedErr
 	}
 
 	err = s.repo.SaveFile(data)
 	if err != nil {
-		runtime.GC()
-		return err
+		logg.Error(fmt.Sprint("Couldn't save file: ", err))
+		return errHandler.FileSaveErr
 	}
-	runtime.GC()
 	return nil
 }
 
@@ -42,7 +47,8 @@ func (s *Service) SaveFile(data models.LeakData) error {
 func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) {
 	files, err := s.repo.FilesList(data)
 	if err != nil {
-		return nil, err
+		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		return nil, errHandler.FileListReceiveErr
 	}
 	filesList := make([]models.LeakData, 0, len(files))
 	// Iterate over the files and create a list of LeakData
@@ -55,11 +61,13 @@ func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) 
 		}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert dislikes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		likes, err := strconv.Atoi(f.Properties["likes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert likes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		// Create a new file and user data
 		userData := &models.UserFileData{
@@ -81,15 +89,16 @@ func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) 
 func (s *Service) File(fileID string) (models.LeakData, error) {
 	// Check if the file exists
 	if fileID == "" {
-		return models.LeakData{}, leaks.ErrFileNotFound
+		logg.Error("File ID is empty")
+		return models.LeakData{}, errHandler.FileNotFoundErr
 	}
 	// Retrieve the file from the repository
 	b, fileData, err := s.repo.File(fileID)
 	if err != nil {
-		if errors.Is(err, leaks.ErrFileNotFound) {
-			return models.LeakData{}, leaks.ErrFileNotFound
+		if errors.Is(err, errHandler.FileNotFoundErr) {
+			return models.LeakData{}, errHandler.FileNotFoundErr
 		}
-		return models.LeakData{}, err
+		return models.LeakData{}, errHandler.FileReceiveErr
 	}
 	// Create a new file and leak data
 	file := &models.File{
@@ -99,10 +108,9 @@ func (s *Service) File(fileID string) (models.LeakData, error) {
 	}
 	leakData := models.LeakData{
 		File:     file,
-		UserData: &models.UserFileData{},
-		Subject:  &models.SubjectData{},
+		UserData: &models.UserFileData{UserId: fileData.Properties["userId"]},
+		Subject:  &models.SubjectData{Faculty: fileData.Properties["faculty"], Subject: fileData.Properties["subject"]},
 	}
-	runtime.GC()
 	return leakData, nil
 }
 
@@ -110,7 +118,8 @@ func (s *Service) File(fileID string) (models.LeakData, error) {
 func (s *Service) DislikeFile(fileID string) error {
 	err := s.repo.DislikeFile(fileID)
 	if err != nil {
-		return err
+		logg.Error(fmt.Sprint("Couldn't dislike file: ", err))
+		return errHandler.ServerErr
 	}
 	return nil
 }
@@ -119,7 +128,8 @@ func (s *Service) DislikeFile(fileID string) error {
 func (s *Service) LikeFile(fileID string) error {
 	err := s.repo.LikeFile(fileID)
 	if err != nil {
-		return err
+		logg.Error(fmt.Sprint("Couldn't like file: ", err))
+		return errHandler.ServerErr
 	}
 	return nil
 }
@@ -128,10 +138,12 @@ func (s *Service) LikeFile(fileID string) error {
 func (s *Service) AllFiles() ([]models.LeakData, error) {
 	files, err := s.repo.AllFiles()
 	if err != nil {
-		return nil, err
+		logg.Error(fmt.Sprint("Couldn't get all files: ", err))
+		return nil, errHandler.FileListReceiveErr
 	}
 	// Create a list of LeakData
 	filesList := make([]models.LeakData, 0, len(files))
+	// Iterate over the files and create a list of LeakData
 	for _, f := range files {
 		file := &models.File{
 			Id:          f.Id,
@@ -142,11 +154,13 @@ func (s *Service) AllFiles() ([]models.LeakData, error) {
 		userData := &models.UserFileData{}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert dislikes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		likes, err := strconv.Atoi(f.Properties["likes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert likes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		userData.Dislikes = dislikes
 		userData.Likes = likes
@@ -165,10 +179,12 @@ func (s *Service) AllFiles() ([]models.LeakData, error) {
 func (s *Service) MyFiles(userID string) ([]models.LeakData, error) {
 	files, err := s.repo.MyFiles(userID)
 	if err != nil {
-		return nil, err
+		logg.Error(fmt.Sprint("Couldn't get all files: ", err))
+		return nil, errHandler.FileListReceiveErr
 	}
 	// Create a list of LeakData
 	filesList := make([]models.LeakData, 0, len(files))
+	// Iterate over the files and create a list of LeakData
 	for _, f := range files {
 		file := &models.File{
 			Id:          f.Id,
@@ -179,11 +195,13 @@ func (s *Service) MyFiles(userID string) ([]models.LeakData, error) {
 		userData := &models.UserFileData{}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert dislikes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		likes, err := strconv.Atoi(f.Properties["likes"])
 		if err != nil {
-			return nil, err
+			logg.Error("Couldn't convert likes to int")
+			return nil, errHandler.FileListReceiveErr
 		}
 		userData.Dislikes = dislikes
 		userData.Likes = likes

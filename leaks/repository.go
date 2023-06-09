@@ -1,7 +1,7 @@
 package leaks
 
 import (
-	"uniLeaks/models"
+	"leaks/models"
 
 	"google.golang.org/api/drive/v3"
 )
