@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
-	"uniLeaks/models"
+	"leaks/models"
 )
 
 type Repository interface {
-	Create(ctx context.Context, newUser models.User) (int,error)
+	CreateUser(ctx context.Context, newUser models.User) (int,error)
 	GetById(ctx context.Context, id int) (models.User, error)
 	GetByMail(ctx context.Context, mail string) (models.User, error)
 }

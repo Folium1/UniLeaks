@@ -1,14 +1,16 @@
 package repository
 
 import (
-	"log"
-
-	"uniLeaks/config"
-	"uniLeaks/models"
+	"fmt"
+	"leaks/config"
+	"leaks/logger"
+	"leaks/models"
 
 	"golang.org/x/net/context"
 	"gorm.io/gorm"
 )
+
+var logg = logger.NewLogger()
 
 type Repository struct {
 	db *gorm.DB
@@ -18,15 +20,16 @@ type Repository struct {
 func New() *Repository {
 	db, err := config.MysqlConn()
 	if err != nil {
-		log.Fatal(err)
+		logg.Fatal(fmt.Sprint("Couldn't connect to mysql, err: ", err))
 	}
 	return &Repository{db}
 }
 
-// Create creates a new user record in the database.
-func (r *Repository) Create(ctx context.Context, newUser models.User) (int, error) {
+// CreateUser creates a new user record in the database.
+func (r *Repository) CreateUser(ctx context.Context, newUser models.User) (int, error) {
 	err := r.db.WithContext(ctx).Create(&newUser).Last(&newUser).Error
 	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't create user, err: ", err))
 		return -1, err
 	}
 	return newUser.ID, nil
@@ -35,8 +38,9 @@ func (r *Repository) Create(ctx context.Context, newUser models.User) (int, erro
 // GetById returns the user record from the database with the specified ID.
 func (r *Repository) GetById(ctx context.Context, id int) (models.User, error) {
 	var user models.User
-	result := r.db.WithContext(ctx).Model(&user).Where("id = %v", id).Scan(&user)
+	result := r.db.WithContext(ctx).Model(&user).Where("id = ?", id).Scan(&user)
 	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't get user, err: ", result.Error))
 		return models.User{}, result.Error
 	}
 	return user, nil
@@ -47,8 +51,8 @@ func (r *Repository) GetByMail(ctx context.Context, mail string) (models.User, e
 	var user models.User
 	result := r.db.WithContext(ctx).Where("email = ?", mail).First(&user)
 	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't get user, err: ", result.Error))
 		return models.User{}, result.Error
 	}
 	return user, nil
 }
-
