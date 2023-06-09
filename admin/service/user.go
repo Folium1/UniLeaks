@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
+	adminRepo "leaks/admin/repository"
+	errHandler "leaks/err"
+	"leaks/models"
 	"time"
-	adminRepo "uniLeaks/admin/repository"
-	"uniLeaks/models"
 )
 
 type UserService struct {
@@ -23,19 +25,34 @@ func NewUserService() UserService {
 func (s *UserService) BanUser(id int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return s.repo.BanUser(ctx, id)
+	err := s.repo.BanUser(ctx, id)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't ban user: ", err))
+		return errHandler.BanUserErr
+	}
+	return nil
 }
 
 // AllUsers returns all users
 func (s *UserService) AllUsers() ([]*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return s.repo.AllUsers(ctx)
+	users, err := s.repo.AllUsers(ctx)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get all users: ", err))
+		return nil, errHandler.UserListReceiveErr
+	}
+	return users, nil
 }
 
 // IsAdmin checks if user is admin
 func (s *UserService) IsAdmin(id int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return s.repo.IsAdmin(ctx, id)
+	isAdmin,err := s.repo.IsAdmin(ctx, id)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't check if user is admin: ", err))
+		return false, errHandler.UserListReceiveErr
+	}
+	return isAdmin, nil
 }

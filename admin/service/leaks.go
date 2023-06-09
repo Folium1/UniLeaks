@@ -3,13 +3,16 @@ package service
 import (
 	"errors"
 	"fmt"
+	adminRepo "leaks/admin/repository"
+	errHandler "leaks/err"
+	"leaks/logger"
+	"leaks/models"
 	"strconv"
-	adminRepo "uniLeaks/admin/repository"
-	errHandler "uniLeaks/err"
-	"uniLeaks/models"
 
 	_ "google.golang.org/api/drive/v3"
 )
+
+var logg = logger.NewLogger()
 
 type LeakService struct {
 	repo *adminRepo.DriveRepo
@@ -27,7 +30,8 @@ func NewLeakService() LeakService {
 func (l *LeakService) FilesList() ([]models.LeakData, error) {
 	files, err := l.repo.FilesList()
 	if err != nil {
-		return nil, err
+		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		return nil, errHandler.FileListReceiveErr
 	}
 	filesList := make([]models.LeakData, 0, len(files))
 	// Iterate over the files and create a list of LeakData
@@ -40,11 +44,13 @@ func (l *LeakService) FilesList() ([]models.LeakData, error) {
 		}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
-			return nil, err
+			logg.Error(fmt.Sprint("Couldn't convert dislikes to int: ", err))
+			return nil, errHandler.FileListReceiveErr
 		}
 		likes, err := strconv.Atoi(f.Properties["likes"])
 		if err != nil {
-			return nil, err
+			logg.Error(fmt.Sprint("Couldn't convert likes to int: ", err))
+			return nil, errHandler.FileListReceiveErr
 		}
 		// Create a new file and user data
 		userData := &models.UserFileData{
@@ -74,15 +80,17 @@ func (l *LeakService) DeleteFile(fileId string) error {
 func (l *LeakService) File(fileID string) (models.LeakData, error) {
 	// Check if the file exists
 	if fileID == "" {
-		return models.LeakData{}, errHandler.ErrFileNotFound
+		logg.Error("File not found, id is empty")
+		return models.LeakData{}, errHandler.FileNotFoundErr
 	}
 	// Retrieve the file from the repository
 	b, fileData, err := l.repo.File(fileID)
 	if err != nil {
-		if errors.Is(err, errHandler.ErrFileNotFound) {
-			return models.LeakData{}, errHandler.ErrFileNotFound
+		logg.Error(fmt.Sprint("Couldn't get file: ", err))
+		if errors.Is(err, errHandler.FileNotFoundErr) {
+			return models.LeakData{}, errHandler.FileNotFoundErr
 		}
-		return models.LeakData{}, err
+		return models.LeakData{}, errHandler.FileReceiveErr
 	}
 	// Create a new file and leak data
 	file := &models.File{

@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"uniLeaks/models"
+	"leaks/models"
 
 	"google.golang.org/api/drive/v2"
 )
