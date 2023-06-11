@@ -47,12 +47,23 @@ func (r *Repository) GetById(ctx context.Context, id int) (models.User, error) {
 }
 
 // GetByMail returns the user record from the database with the specified email address.
-func (r *Repository) GetByMail(ctx context.Context, mail string) (models.User, error) {
+func (r *Repository) GetByNick(ctx context.Context, nick string) (models.User, error) {
 	var user models.User
-	result := r.db.WithContext(ctx).Where("email = ?", mail).First(&user)
+	result := r.db.WithContext(ctx).Where("nick_name = ?", nick).First(&user)
 	if result.Error != nil {
 		logg.Error(fmt.Sprint("Couldn't get user, err: ", result.Error))
 		return models.User{}, result.Error
 	}
 	return user, nil
+}
+
+// BannedMail returns all mail addresses that are banned.
+func (r *Repository) BannedMails(ctx context.Context) ([]string, error) {
+	var mails []string
+	result := r.db.WithContext(ctx).Model(&models.User{}).Where("is_banned = ?", true).Pluck("email", &mails)
+	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't get banned mails, err: ", result.Error))
+		return nil, result.Error
+	}
+	return mails, nil
 }
