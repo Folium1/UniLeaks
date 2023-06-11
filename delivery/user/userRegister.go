@@ -3,11 +3,12 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
+	auth "leaks/auth"
+	errHandler "leaks/err"
+	"leaks/models"
 	"net/http"
 	"time"
-	auth "uniLeaks/auth/delivery/http"
-	errHandler "uniLeaks/delivery/err"
-	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,41 +20,66 @@ var (
 	middleware  = auth.New()
 )
 
-// getRegister handles GET request to /user/register
-func (u UserHandler) Register(c *gin.Context) {
-	err := u.tmpl.ExecuteTemplate(c.Writer, registerPage, nil)
+// GetRegister handles GET request to /user/register
+func (u *UserHandler) Register(ctx *gin.Context) {
+	err := u.tmpl.ExecuteTemplate(ctx.Writer, registerPage, nil)
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		logg.Error(fmt.Sprint("Error while executing template:", err))
+		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 }
 
-// postRegister handles POST request to /user/register
-func (u UserHandler) PostRegister(c *gin.Context) {
+// PostRegister handles POST request to /user/register
+func (u *UserHandler) PostRegister(ctx *gin.Context) {
 	newUser := models.User{
-		Email:    c.PostForm("email"),
-		Password: c.PostForm("password"),
+		Email:    ctx.PostForm("email"),
+		NickName: ctx.PostForm("nickName"),
+		Password: ctx.PostForm("password"),
+		IsBanned: false,
+		IsAdmin:  false,
 	}
 	// Validate user input
 	if err := validateUserInput(newUser); err != nil {
-		errHandler.ResponseWithErr(c, registerPage, err)
+		logg.Error(fmt.Sprint("Error while validating user input:", err))
+		errHandler.ResponseWithErr(ctx, u.tmpl, registerPage, err)
 	}
-	// Hash password
-	hashedPassword, err := hashPassword(newUser.Password)
+	// Check if user with such nickname already banned
+	if err := checkIfMailIsBanned(u.userService, newUser.Email); err != nil {
+		// Check for a particular err
+		if err == errHandler.UserIsBannedErr {
+			u.tmpl.ExecuteTemplate(ctx.Writer, registerPage, err)
+		} else {
+			errHandler.ResponseWithErr(ctx, u.tmpl, errHandler.ErrPage, err)
+		}
+	}
+	// Hash password and mail
+	hashedPassword, err := hashString(newUser.Password)
 	if err != nil {
-		errHandler.ResponseWithErr(c, registerPage, registerErr)
+		logg.Error(fmt.Sprint("Error while hashing password:", err))
+		errHandler.ResponseWithErr(ctx, u.tmpl, registerPage, registerErr)
 		return
 	}
+	hashedMail, err := hashString(newUser.Email)
+	if err != nil {
+		logg.Error(fmt.Sprint("Error while hashing mail:", err))
+		errHandler.ResponseWithErr(ctx, u.tmpl, registerPage, registerErr)
+		return
+	}
+	// Set hashed password and mail to user struct
 	newUser.Password = string(hashedPassword)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	newUser.Email = string(hashedMail)
+	context, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// Save user to database
-	userId, err := u.userService.Create(ctx, newUser)
+	userId, err := u.userService.CreateUser(context, newUser)
 	if err != nil {
-		errHandler.ResponseWithErr(c, registerPage, registerErr)
+		logg.Error(fmt.Sprint("Error while saving user to db:", err))
+		errHandler.ResponseWithErr(ctx, u.tmpl, registerPage, err)
 		return
 	}
+	logg.Info(fmt.Sprintf("User with id %d registered", userId))
 	// Authentication successful
-	middleware.AuthorizeUser(c, userId)
-	c.Redirect(http.StatusFound, "/leaks")
+	middleware.AuthorizeUser(ctx, userId)
+	ctx.Redirect(http.StatusFound, "/leaks")
 }
