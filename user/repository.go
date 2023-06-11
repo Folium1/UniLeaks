@@ -6,7 +6,8 @@ import (
 )
 
 type Repository interface {
-	CreateUser(ctx context.Context, newUser models.User) (int,error)
+	CreateUser(ctx context.Context, newUser models.User) (int, error)
 	GetById(ctx context.Context, id int) (models.User, error)
-	GetByMail(ctx context.Context, mail string) (models.User, error)
+	GetByNick(ctx context.Context, nick string) (models.User, error)
+	BannedMails(ctx context.Context) ([]string, error)
 }

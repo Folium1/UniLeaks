@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	errHandler "leaks/err"
 	"leaks/logger"
 	"leaks/models"
-	"leaks/user"
 	repository "leaks/user"
 
 	"github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var logg = logger.NewLogger()
@@ -19,10 +20,11 @@ type UserUseCase struct {
 }
 
 // New creates a new UserUseCase with the given repository.
-func New(repository repository.Repository) user.Repository {
-	return &UserUseCase{repository}
+func New(repository repository.Repository) UserUseCase {
+	return UserUseCase{repository}
 }
 
+// isDuplicateEntryError checks if the given error is a MySQL duplicate entry error.
 func isDuplicateEntryError(err error) bool {
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) {
@@ -37,7 +39,7 @@ func (u UserUseCase) CreateUser(ctx context.Context, newUser models.User) (int, 
 	// Check if the error is a duplicate entry error.
 	if isDuplicateEntryError(err) {
 		logg.Error(fmt.Sprint("Couldn't create user, err: ", err))
-		return -1, errors.New("Юзер з таким мейлом вже існує")
+		return -1, errors.New("Юзер з таким мейлом або ніком вже існує")
 	}
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't create user, err: ", err))
@@ -56,12 +58,28 @@ func (u UserUseCase) GetById(ctx context.Context, id int) (models.User, error) {
 	return user, nil
 }
 
-// GetByMail gets the user with the given email from the repository.
-func (u UserUseCase) GetByMail(ctx context.Context, mail string) (models.User, error) {
-	user, err := u.repo.GetByMail(ctx, mail)
+// GetByNick gets the user with the given email from the repository.
+func (u UserUseCase) GetByNick(ctx context.Context, nick string) (models.User, error) {
+	user, err := u.repo.GetByNick(ctx, nick)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get user by mail, err: ", err))
 		return models.User{}, errors.New("Couldn't get user, by mail")
 	}
 	return user, nil
+}
+
+// IsBanned checks if the user with the given email is banned. If the user is banned, it returns an error = UserIsBannedErr.
+func (u UserUseCase) IsBanned(ctx context.Context, userMail string) error {
+	mails, err := u.repo.BannedMails(ctx)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get banned mails, err: ", err))
+		return errHandler.ServerErr
+	}
+	// Check if the user is banned by comparing the user's email with the banned emails hash.
+	for _, mail := range mails {
+		if err = bcrypt.CompareHashAndPassword([]byte(mail), []byte(userMail)); err == nil {
+			return errHandler.UserIsBannedErr
+		}
+	}
+	return nil
 }
