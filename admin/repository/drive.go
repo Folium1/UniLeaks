@@ -78,19 +78,20 @@ func (r *DriveRepo) GetUserFilesList(userId string) ([]*drive.File, error) {
 }
 
 // DeleteAllUserFiles deletes all user files from drive
-func (r *DriveRepo) DeleteAllUserFiles(userId string) {
+func (r *DriveRepo) DeleteAllUserFiles(userId string) error {
 	files, err := r.drive.Files.List().Fields("files(id)").Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
-		return
+		return err
 	}
 	for _, file := range files.Files {
 		if file.Properties["userId"] == userId {
 			err := r.drive.Files.Delete(file.Id).Do()
 			if err != nil {
 				logg.Error(fmt.Sprint("Couldn't delete file, err:", err))
-				return
+				return err
 			}
 		}
 	}
+	return nil
 }
