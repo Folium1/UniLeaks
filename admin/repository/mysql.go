@@ -54,3 +54,35 @@ func (r *UserRepo) IsAdmin(ctx context.Context, id int) (bool, error) {
 	}
 	return user.IsAdmin, nil
 }
+
+// GetByNick returns the user record from the database with the specified email address.
+func (r *UserRepo) GetByNick(ctx context.Context, nick string) (models.User, error) {
+	var user models.User
+	result := r.db.WithContext(ctx).Where("nick_name = ?", nick).First(&user)
+	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't get user, err: ", result.Error))
+		return models.User{}, result.Error
+	}
+	return user, nil
+}
+
+// GetBannedUsers returns all banned users
+func (r *UserRepo) GetBannedUsers(ctx context.Context) ([]*models.User, error) {
+	var users []*models.User
+	result := r.db.WithContext(ctx).Where("is_banned = ?", true).Find(&users)
+	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't get banned users, err: ", result.Error))
+		return nil, result.Error
+	}
+	return users, nil
+}
+
+// UnbanUser sets the banned flag on the user record with the specified ID.
+func (r *UserRepo) UnbanUser(ctx context.Context, id int) error {
+	result := r.db.WithContext(ctx).Set("is_banned", false).Where("id = %v", id)
+	if result.Error != nil {
+		logg.Error(fmt.Sprint("Couldn't unban user, err: ", result.Error))
+		return result.Error
+	}
+	return nil
+}
