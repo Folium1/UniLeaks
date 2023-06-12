@@ -14,7 +14,7 @@ var logg = logger.NewLogger()
 
 // DriveRepo is a repository for the Google Drive API
 type DriveRepo struct {
-	driveService *drive.Service
+	drive *drive.Service
 }
 
 // New creates a new instance of the repository.
@@ -28,12 +28,12 @@ func NewDriveRepo() *DriveRepo {
 
 // DeleteFile deletes file from drive
 func (r *DriveRepo) DeleteFile(fileId string) error {
-	return r.driveService.Files.Delete(fileId).Do()
+	return r.drive.Files.Delete(fileId).Do()
 }
 
 // FilesList returns a list of files from drive ordered by dislikes
 func (r *DriveRepo) FilesList() ([]*drive.File, error) {
-	files, err := r.driveService.Files.List().Fields("files(id, name, description, size, properties)").Do()
+	files, err := r.drive.Files.List().Fields("files(id, name, description, size, properties)").Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
@@ -44,13 +44,13 @@ func (r *DriveRepo) FilesList() ([]*drive.File, error) {
 // File returns file by its id
 func (r *DriveRepo) File(fileID string) ([]byte, drive.File, error) {
 	// Get the file metadata
-	fileData, err := r.driveService.Files.Get(fileID).Fields("name, description, size, properties").Do()
+	fileData, err := r.drive.Files.Get(fileID).Fields("name, description, size, properties").Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
 		return nil, drive.File{}, err
 	}
 	// Get the file content
-	res, err := r.driveService.Files.Get(fileID).Download()
+	res, err := r.drive.Files.Get(fileID).Download()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get file content, err:", err))
 		return nil, drive.File{}, err
@@ -65,4 +65,32 @@ func (r *DriveRepo) File(fileID string) ([]byte, drive.File, error) {
 		return nil, drive.File{}, err
 	}
 	return buffer.Bytes(), *fileData, nil
+}
+
+// GetUserFilesList returns a list of user files from drive
+func (r *DriveRepo) GetUserFilesList(userId string) ([]*drive.File, error) {
+	files, err := r.drive.Files.List().Q(fmt.Sprintf("properties has { key='userId' and value='%s' }", userId)).Fields("files(id, name, description, size, properties)").Do()
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
+		return nil, err
+	}
+	return files.Files, nil
+}
+
+// DeleteAllUserFiles deletes all user files from drive
+func (r *DriveRepo) DeleteAllUserFiles(userId string) {
+	files, err := r.drive.Files.List().Fields("files(id)").Do()
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
+		return
+	}
+	for _, file := range files.Files {
+		if file.Properties["userId"] == userId {
+			err := r.drive.Files.Delete(file.Id).Do()
+			if err != nil {
+				logg.Error(fmt.Sprint("Couldn't delete file, err:", err))
+				return
+			}
+		}
+	}
 }
