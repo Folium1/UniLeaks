@@ -2,8 +2,11 @@ package admin
 
 import (
 	"html/template"
-	admin "uniLeaks/admin/service"
+	admin "leaks/admin/service"
+	"leaks/logger"
 )
+
+var logg = logger.NewLogger()
 
 type AdminHandler struct {
 	tmpl *template.Template
