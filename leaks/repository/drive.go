@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -17,17 +18,19 @@ import (
 
 // Constants for the Google Drive file properties keys
 const (
-	userIdStr    = "user_id"
-	subjStr      = "subject"
-	facultyStr   = "faculty"
-	yearStr      = "year"
-	semesterStr  = "semester"
-	moduleNumStr = "moduleNum"
-	fileSize     = "size"
-	isModuleStr  = "is_module"
-	isExamStr    = "is_exam"
-	likeStr      = "likes"
-	dislikeStr   = "dislikes"
+	userIdStr        = "user_id"
+	subjStr          = "subject"
+	facultyStr       = "faculty"
+	yearStr          = "year"
+	semesterStr      = "semester"
+	moduleNumStr     = "moduleNum"
+	fileSize         = "size"
+	isModuleStr      = "is_module"
+	isExamStr        = "is_exam"
+	likeStr          = "likes"
+	usersLikedStr    = "users_liked"
+	dislikeStr       = "dislikes"
+	usersDislikedStr = "users_disliked"
 )
 
 var logg = logger.NewLogger()
@@ -59,9 +62,11 @@ func (r *Repo) SaveFile(data models.LeakData) error {
 			isExamStr:    strconv.FormatBool(data.Subject.IsExam),
 			isModuleStr:  strconv.FormatBool(data.Subject.IsModuleTask),
 
-			userIdStr:  data.UserData.UserId,
-			likeStr:    "0",
-			dislikeStr: "0",
+			userIdStr:        data.UserData.UserId,
+			likeStr:          "0",
+			usersLikedStr:    "",
+			dislikeStr:       "0",
+			usersDislikedStr: "",
 		},
 		Description: data.File.Description,
 	}
@@ -94,7 +99,7 @@ func (r *Repo) FilesList(data models.SubjectData) ([]*drive.File, error) {
 	// Build the query for searching files
 	query := buildQuery(data)
 	// Get the list of files from Google Drive
-	files, err := r.driveService.Files.List().Q(query).Fields("files(id, name, description, size, properties)").Do()
+	files, err := r.driveService.Files.List().Q(query).Fields("files(id, name, description, size, properties, createdTime)").OrderBy("name").Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
@@ -128,30 +133,118 @@ func (r *Repo) File(fileID string) ([]byte, drive.File, error) {
 	return buffer.Bytes(), *fileData, nil
 }
 
-// LikeFile increments the number of likes for particular file
-func (r *Repo) LikeFile(fileId string) error {
-	// Get the current like count from the file's properties field
-	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
+// LikeFile increments the number of likes for a particular file
+func (r *Repo) LikeFile(fileID, userID string) error {
+	// Retrieve file data
+	file, err := r.getFileProperties(fileID)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
-		return err
-	}
-	likeStr := file.Properties[likeStr]
-	likeCount, err := strconv.Atoi(likeStr)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't convert like count to int, err:", err))
 		return err
 	}
 
-	// Increment the like count and update the properties field of the file
-	likeCount++
-	properties := map[string]string{
-		likeStr: strconv.Itoa(likeCount),
+	// Check if the user has already liked or disliked the file
+	if userHasAction(file.Properties[usersLikedStr], userID) {
+		// Decrement the like count
+		likeCount, err := strconv.Atoi(file.Properties[likeStr])
+		if err != nil {
+			return err
+		}
+		likeCount--
+
+		// Update the file properties
+		properties := map[string]string{
+			usersLikedStr: strings.ReplaceAll(file.Properties[usersLikedStr], userID+",", ""),
+			likeStr:       strconv.Itoa(likeCount),
+		}
+		if err := r.updateFileProperties(fileID, properties); err != nil {
+			return err
+		}
+	} else if userHasAction(file.Properties[usersDislikedStr], userID) {
+		return errors.New("user has already disliked the file")
+	} else {
+		// Increment the like count
+		likeCount, err := strconv.Atoi(file.Properties[likeStr])
+		if err != nil {
+			return err
+		}
+		likeCount++
+
+		// Update the file properties
+		properties := map[string]string{
+			usersLikedStr: file.Properties[usersLikedStr] + userID + ",",
+			likeStr:       strconv.Itoa(likeCount),
+		}
+		if err := r.updateFileProperties(fileID, properties); err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+// DislikeFile increments the number of dislikes for a particular file
+func (r *Repo) DislikeFile(fileID, userID string) error {
+	// Retrieve file data
+	file, err := r.getFileProperties(fileID)
+	if err != nil {
+		return err
+	}
+
+	// Check if the user has already liked or disliked the file
+	if userHasAction(file.Properties[usersLikedStr], userID) {
+		return errors.New("user has already liked the file")
+	} else if userHasAction(file.Properties[usersDislikedStr], userID) {
+		// Decrement the dislike count
+		dislikeCount, err := strconv.Atoi(file.Properties[dislikeStr])
+		if err != nil {
+			return err
+		}
+		dislikeCount--
+
+		// Update the file properties
+		properties := map[string]string{
+			usersDislikedStr: strings.ReplaceAll(file.Properties[usersDislikedStr], userID+",", ""),
+			dislikeStr:       strconv.Itoa(dislikeCount),
+		}
+		if err := r.updateFileProperties(fileID, properties); err != nil {
+			return err
+		}
+	} else {
+		// Increment the dislike count
+		dislikeCount, err := strconv.Atoi(file.Properties[dislikeStr])
+		if err != nil {
+			return err
+		}
+		dislikeCount++
+
+		// Update the file properties
+		properties := map[string]string{
+			usersDislikedStr: file.Properties[usersDislikedStr] + userID + ",",
+			dislikeStr:       strconv.Itoa(dislikeCount),
+		}
+		if err := r.updateFileProperties(fileID, properties); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Helper function to retrieve file properties from Google Drive API
+func (r *Repo) getFileProperties(fileID string) (*drive.File, error) {
+	file, err := r.driveService.Files.Get(fileID).Fields("properties").Do()
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
+		return nil, err
+	}
+	return file, nil
+}
+
+// Helper function to update file properties using Google Drive API
+func (r *Repo) updateFileProperties(fileID string, properties map[string]string) error {
 	update := drive.File{
 		Properties: properties,
 	}
-	_, err = r.driveService.Files.Update(fileId, &update).Do()
+	_, err := r.driveService.Files.Update(fileID, &update).Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't update file data, err:", err))
 		return err
@@ -159,41 +252,15 @@ func (r *Repo) LikeFile(fileId string) error {
 	return nil
 }
 
-// LikeFile increments the number of dislikes for particular file
-func (r *Repo) DislikeFile(fileId string) error {
-	// Get the current dislike count from the file's properties field
-	file, err := r.driveService.Files.Get(fileId).Fields("properties").Do()
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get file data, err:", err))
-		return err
-	}
-	dislikesStr := file.Properties[dislikeStr]
-	dislikes, err := strconv.Atoi(dislikesStr)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't convert dislike count to int, err:", err))
-		return err
-	}
-
-	// Increment the dislike count and update the properties field of the file
-	dislikes++
-	properties := map[string]string{
-		dislikesStr: strconv.Itoa(dislikes),
-	}
-	update := drive.File{
-		Properties: properties,
-	}
-	_, err = r.driveService.Files.Update(fileId, &update).Do()
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't update file data, err:", err))
-		return err
-	}
-	return nil
+// Helper function to check if a user has performed an action
+func userHasAction(actions, userID string) bool {
+	return strings.Contains(actions, userID)
 }
 
 // AllFiles returns all files from Google Drive
 func (r *Repo) AllFiles() ([]*drive.File, error) {
 	fields := "files(id, description, name, size, properties)"
-	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q("").Do()
+	files, err := r.driveService.Files.List().Fields(googleapi.Field(fields)).Q("").OrderBy("createdTime desc").Do()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get files list, err:", err))
 		return nil, err
