@@ -7,11 +7,11 @@ type LeakData struct {
 }
 
 type File struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Size        int64  `json:"size"`
-	Content  []byte `json:"file"`
+	Id          string  `json:"id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Size        float64 `json:"size"`
+	Content     []byte  `json:"file"`
 }
 
 type SubjectData struct {
@@ -28,4 +28,10 @@ type UserFileData struct {
 	UserId   string `json:"user_id"`
 	Likes    int    `json:"likes"`
 	Dislikes int    `json:"dislikes"`
+}
+
+type LikeDislikeData struct {
+	UserId string `json:"userId"`
+	FileId string `json:"fileId"`
+	Action string `json:"action"`
 }
