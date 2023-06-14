@@ -7,6 +7,7 @@ import (
 	"leaks/leaks"
 	"leaks/logger"
 	"leaks/models"
+	"log"
 	"strconv"
 )
 
@@ -57,9 +58,15 @@ func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) 
 			Id:          f.Id,
 			Name:        f.Name,
 			Description: f.Description,
-			Size:        f.Size,
+			Size:        float64(f.Size) / 1024 / 1024,
 		}
-		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
+		dislikesStr, ok := f.Properties["dislikes"]
+		if !ok {
+			logg.Error("Couldn't find dislikes property")
+			return nil, errHandler.FileListReceiveErr
+		}
+		log.Println(dislikesStr)
+		dislikes, err := strconv.Atoi(dislikesStr)
 		if err != nil {
 			logg.Error("Couldn't convert dislikes to int")
 			return nil, errHandler.FileListReceiveErr
@@ -114,22 +121,29 @@ func (s *Service) File(fileID string) (models.LeakData, error) {
 	return leakData, nil
 }
 
-// DislikeFile increments the dislike count of a file in the repository.
-func (s *Service) DislikeFile(fileID string) error {
-	err := s.repo.DislikeFile(fileID)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't dislike file: ", err))
-		return errHandler.ServerErr
+// / LikeDislikeFile likes or dislikes a file.
+func (s *Service) LikeDislikeFile(data models.LikeDislikeData) error {
+	// Check if the file exists
+	if data.FileId == "" {
+		logg.Error("File ID is empty")
+		return errHandler.FileNotFoundErr
 	}
-	return nil
-}
-
-// LikeFile increments the like count of a file in the repository.
-func (s *Service) LikeFile(fileID string) error {
-	err := s.repo.LikeFile(fileID)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't like file: ", err))
-		return errHandler.ServerErr
+	// Retrieve the file from the repository
+	if data.Action == "like" {
+		err := s.repo.LikeFile(data.FileId, data.UserId)
+		if err != nil {
+			logg.Error(fmt.Sprint("Couldn't like file: ", err))
+			return errHandler.LikeDislikeErr
+		}
+	} else if data.Action == "dislike" {
+		err := s.repo.DislikeFile(data.FileId, data.UserId)
+		if err != nil {
+			logg.Error(fmt.Sprint("Couldn't dislike file: ", err))
+			return errHandler.LikeDislikeErr
+		}
+	} else {
+		logg.Error("Invalid action")
+		return errHandler.InvalidActionErr
 	}
 	return nil
 }
@@ -149,7 +163,7 @@ func (s *Service) AllFiles() ([]models.LeakData, error) {
 			Id:          f.Id,
 			Name:        f.Name,
 			Description: f.Description,
-			Size:        f.Size,
+			Size:        float64(f.Size) / 1024 / 1024,
 		}
 		userData := &models.UserFileData{}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
@@ -190,7 +204,7 @@ func (s *Service) MyFiles(userID string) ([]models.LeakData, error) {
 			Id:          f.Id,
 			Name:        f.Name,
 			Description: f.Description,
-			Size:        f.Size,
+			Size:        float64(f.Size) / 1024 / 1024,
 		}
 		userData := &models.UserFileData{}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
