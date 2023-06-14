@@ -68,22 +68,6 @@ func (h Handler) generateToken(userId int, expire int) string {
 	return signedToken
 }
 
-// TokenFromCookies gets the authentication or refresh token from cookies.
-func (h Handler) tokenFromCookies(c *gin.Context) (models.Token, error) {
-	token, err := c.Cookie(AuthString)
-	if err != nil {
-		refreshToken, err := c.Cookie(RefreshString)
-		if err != nil {
-			return models.Token{}, err
-		}
-		token := models.Token{TokenType: RefreshString, Value: refreshToken}
-
-		return token, nil
-	}
-	tk := models.Token{TokenType: AuthString, Value: token}
-	return tk, nil
-}
-
 // AuthTokenFromCookies retrieves the authentication token from cookies in the context.
 // If there is an error retrieving the token or the token is empty, it returns an error.
 // Otherwise, it splits the token to get the value and returns a Token object with TokenType "AuthString".
