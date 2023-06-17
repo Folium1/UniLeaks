@@ -3,13 +3,13 @@ package leaks
 import (
 	"bytes"
 	"io"
-	"log"
+	"leaks/models"
 	"strconv"
-	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
 )
 
+// parseFileData parses the file data from the request
 func parseFileData(data *models.File, c *gin.Context) error {
 	file, err := c.FormFile("file-upload")
 	if err != nil {
@@ -18,7 +18,6 @@ func parseFileData(data *models.File, c *gin.Context) error {
 	fileDescription := c.PostForm("file-description")
 	data.Description = fileDescription
 	data.Name = file.Filename
-
 	// Open the file
 	f, err := file.Open()
 	if err != nil {
@@ -48,14 +47,12 @@ func parseSubjectData(data *models.SubjectData, c *gin.Context) error {
 	semesterNum := c.PostForm("semester")
 	data.Semester, err = strconv.ParseUint(semesterNum, 10, 64)
 	if err != nil {
-		log.Println("Err to parse to uint, err:", err)
 		return err
 	}
 
 	moduleNumStr := c.PostForm("module_num")
 	data.ModuleNum, err = strconv.ParseUint(moduleNumStr, 10, 64)
 	if err != nil {
-		log.Println("Err to parse to uint, err:", err)
 		return err
 	}
 

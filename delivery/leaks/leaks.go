@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
+
+	errHandler "leaks/err"
+	"leaks/models"
 	"net/http"
 	"os"
-	"runtime"
-	errHandler "uniLeaks/delivery/err"
-	"uniLeaks/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,165 +17,199 @@ const (
 	uploadPage = "uploadFilePage.html"
 )
 
-type Faculties struct {
-	Name  string
-	Value string
-}
-
 // MainPage displays the main page with the list of faculties
-func (l *LeaksHandler) MainPage(c *gin.Context) {
-	id, ok := c.Get("userId")
-	if !ok {
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
-		return
-	}
-	err := l.tmpl.ExecuteTemplate(c.Writer, "leaks.html", id)
+func (l *LeaksHandler) MainPage(ctx *gin.Context) {
+	err := l.tmpl.ExecuteTemplate(ctx.Writer, "leaks.html", nil)
 	if err != nil {
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
 		return
 	}
 }
 
 // UploadFilePage displays the upload file page
-func (l *LeaksHandler) UploadFilePage(c *gin.Context) {
-	err := l.tmpl.ExecuteTemplate(c.Writer, uploadPage, nil)
+func (l *LeaksHandler) UploadFilePage(ctx *gin.Context) {
+	err := l.tmpl.ExecuteTemplate(ctx.Writer, uploadPage, nil)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
 		return
 	}
 }
 
 // UploadFile handles the file upload request
-func (l *LeaksHandler) UploadFile(c *gin.Context) {
-	userId, ok := c.Get("userId")
+func (l *LeaksHandler) UploadFile(ctx *gin.Context) {
+	// Get user id
+	userId, ok := ctx.Get("userId")
 	if !ok {
-		errHandler.ResponseWithErr(c,l.tmpl, uploadPage, errors.New("Помилка отримання данних з файлу"))
+		logg.Info("Couldn't get user id from context")
+		errHandler.ResponseWithErr(ctx, l.tmpl, uploadPage, errors.New("Помилка отримання данних з файлу"))
 		return
 	}
+	// Parse file and subject data
 	data := models.LeakData{File: &models.File{}, Subject: &models.SubjectData{}, UserData: &models.UserFileData{UserId: fmt.Sprintf("%v", userId)}}
-	err := parseFileData(data.File, c)
+	err := parseFileData(data.File, ctx)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, uploadPage, errors.New("Помилка отримання данних з файлу"))
+		logg.Error(fmt.Sprint("Couldn't parse file data: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, uploadPage, errors.New("Помилка отримання данних з файлу"))
 		return
 	}
-	err = parseSubjectData(data.Subject, c)
+	err = parseSubjectData(data.Subject, ctx)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, uploadPage, errors.New("Помилка отримання заданих данних"))
+		logg.Error(fmt.Sprint("Couldn't parse subject data: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, uploadPage, errors.New("Помилка отримання заданих данних"))
 		return
 	}
-	err = l.leakService.SaveFile(&data)
+	// Save file
+	err = l.leakService.SaveFile(data)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, uploadPage, err)
+		logg.Error(fmt.Sprint("Couldn't save file: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, uploadPage, err)
 		return
 	}
-	runtime.GC()
-	data.File.Content = nil
-	c.Redirect(http.StatusSeeOther, "/leaks/get-files/")
+	logg.Info(fmt.Sprintf("File %s uploaded by %v", data.File.Name, userId))
+	ctx.Redirect(http.StatusSeeOther, "/leaks/upload-files/")
 }
 
 // FilesPage displays the get files page
-func (l *LeaksHandler) FilesPage(c *gin.Context) {
-	err := l.tmpl.ExecuteTemplate(c.Writer, "getFiles.html", nil)
+func (l *LeaksHandler) FilesPage(ctx *gin.Context) {
+	err := l.tmpl.ExecuteTemplate(ctx.Writer, "getFiles.html", nil)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
 		return
 	}
 }
 
 // FilesList retrieves and displays the list of files based on subject data
-func (l *LeaksHandler) FilesList(c *gin.Context) {
+func (l *LeaksHandler) FilesList(ctx *gin.Context) {
+	// Parse subject data
 	var data models.SubjectData
-	err := parseSubjectData(&data, c)
+	err := parseSubjectData(&data, ctx)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errors.New("Помилка при отриманні данних, спробуйте ще раз"))
+		logg.Error(fmt.Sprint("Couldn't parse subject data: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errors.New("Помилка при отриманні данних, спробуйте ще раз"))
 		return
 	}
-
+	// Get files list
 	files, err := l.leakService.FilesList(data)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів"))
+		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів"))
 		return
 	}
-	err = l.tmpl.ExecuteTemplate(c.Writer, "files.html", files)
+	// Display files list
+	err = l.tmpl.ExecuteTemplate(ctx.Writer, "files.html", files)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
 		return
 	}
 }
 
 // DownloadFile handles the file download request
-func (l *LeaksHandler) DownloadFile(c *gin.Context) {
-	fileId := c.Param("id")
+func (l *LeaksHandler) DownloadFile(ctx *gin.Context) {
+	fileId := ctx.Param("id")
 	leakData, err := l.leakService.File(fileId)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.FileReceivedErr)
+		logg.Error(fmt.Sprint("Couldn't get file: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.FileReceiveErr)
 		return
 	}
 	// Create a temporary file
-	tempFile, err := ioutil.TempFile("", leakData.File.Name)
+	tempFile, err := ioutil.TempFile("", leakData.File.Id)
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.FileReceivedErr)
+		logg.Error(fmt.Sprint("Couldn't create temporary file: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.FileReceiveErr)
 		return
 	}
 	// Write the file content
 	if _, err := tempFile.Write(leakData.File.Content); err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.FileReceivedErr)
+		logg.Error(fmt.Sprint("Couldn't write file content: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.FileReceiveErr)
 		return
 	}
 	leakData.File.Content = nil
 	// Close the file
 	defer func() {
 		if err := tempFile.Close(); err != nil {
-			log.Println(err)
+			logg.Error(fmt.Sprint("Couldn't close file: ", err))
 		}
 		if err := os.Remove(tempFile.Name()); err != nil {
-			log.Println(err)
+			logg.Error(fmt.Sprint("Couldn't remove file: ", err))
 		}
 	}()
-	runtime.GC()
+	logg.Info(fmt.Sprintf("File downloaded:%v/%v/%v by %v", leakData.Subject.Faculty, leakData.Subject.Subject, leakData.File.Name, ctx.MustGet("userId")))
 	// Set the appropriate headers
-	c.Header("Content-Description", "File Transfer")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", leakData.File.Name))
-	c.File(tempFile.Name())
+	ctx.Header("Content-Description", "File Transfer")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", leakData.File.Name))
+	ctx.File(tempFile.Name())
 }
 
 // AllFiles retrieves and displays all files
-func (l *LeaksHandler) AllFiles(c *gin.Context) {
+func (l *LeaksHandler) AllFiles(ctx *gin.Context) {
 	files, err := l.leakService.AllFiles()
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів, спробуйте ще раз"))
+		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів, спробуйте ще раз"))
 		return
 	}
-	err = l.tmpl.ExecuteTemplate(c.Writer, "files.html", files)
+	err = l.tmpl.ExecuteTemplate(ctx.Writer, "files.html", files)
 	if err != nil {
-		log.Fatal(err)
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		return
 	}
 }
 
-func (l *LeaksHandler) MyFiles(c *gin.Context) {
-	userId, ok := c.Get("userId")
+// MyFiles retrieves and displays files uploaded by the user
+func (l *LeaksHandler) MyFiles(ctx *gin.Context) {
+	userId, ok := ctx.Get("userId")
 	if !ok {
-		log.Println("Error while getting userId from context")
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		logg.Error("Couldn't get userId from context")
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
 		return
 	}
+	// Get files list
 	files, err := l.leakService.MyFiles(fmt.Sprintf("%v", userId))
 	if err != nil {
-		log.Println(err)
-		errHandler.ResponseWithErr(c,l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів, спробуйте ще раз"))
+		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errors.New("Помилка отримання списку файлів, спробуйте ще раз"))
 		return
 	}
-	l.tmpl.ExecuteTemplate(c.Writer, "myFiles.html", files)
+	// Execute template
+	err = l.tmpl.ExecuteTemplate(ctx.Writer, "myFiles.html", files)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		return
+	}
+}
+
+// LikeDislike handles the like/dislike request
+func (l *LeaksHandler) LikeDislikeFile(ctx *gin.Context) {
+	var data models.LikeDislikeData
+	// Retrieve data from request
+	err := ctx.BindJSON(&data)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't bind json: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		return
+	}
+	// Get userId from context
+	userId, ok := ctx.Get("userId")
+	if !ok {
+		logg.Error("Couldn't get userId from context")
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		return
+	}
+	data.UserId = fmt.Sprintf("%v", userId)
+	// Like/dislike file
+	err = l.leakService.LikeDislikeFile(data)
+	if err != nil {
+		logg.Error(fmt.Sprint("Couldn't like/dislike: ", err))
+		errHandler.ResponseWithErr(ctx, l.tmpl, errHandler.ErrPage, errHandler.ServerErr)
+		return
+	}
+	ctx.Status(http.StatusOK)
 }

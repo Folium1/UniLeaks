@@ -2,9 +2,12 @@ package leaks
 
 import (
 	"html/template"
-	leaksRepository "uniLeaks/leaks/repository"
-	leaksService "uniLeaks/leaks/service"
+	leaksRepository "leaks/leaks/repository"
+	leaksService "leaks/leaks/service"
+	"leaks/logger"
 )
+
+var logg = logger.NewLogger()
 
 type LeaksHandler struct {
 	tmpl        *template.Template
