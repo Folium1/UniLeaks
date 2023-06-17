@@ -2,25 +2,22 @@ package delivery
 
 import (
 	"crypto/tls"
+	"fmt"
 	"html/template"
-	"log"
+	auth "leaks/auth"
+	admin "leaks/delivery/admin"
+	leaksHandler "leaks/delivery/leaks"
+	user "leaks/delivery/user"
+	"leaks/logger"
 	"net/http"
-	auth "uniLeaks/auth"
-	admin "uniLeaks/delivery/admin"
-	leaksHandler "uniLeaks/delivery/leaks"
-	user "uniLeaks/delivery/user"
 
 	"github.com/gin-gonic/gin"
 )
 
 var (
+	logg       = logger.NewLogger()
 	middleware = auth.New()
 )
-
-type subjects struct {
-	Name  string
-	Value string
-}
 
 type Handler struct {
 	tmpl   *template.Template
@@ -62,6 +59,8 @@ func (h *Handler) handleLeaks() {
 	leaks := h.router.Group("/leaks", middleware.AuthAndRefreshMiddleware())
 	{
 		leaks.GET("/", h.leaks.MainPage)
+		leaks.GET("/terms", h.termsOfUse)
+		leaks.POST("/like-dislike", h.leaks.LikeDislikeFile)
 		download := leaks.Group("/download")
 		{
 			download.GET("/:id", h.leaks.DownloadFile)
@@ -89,10 +88,25 @@ func (h *Handler) handleAdmin() {
 	admin := h.router.Group("/admin", middleware.AuthAndRefreshMiddleware(), middleware.IsAdmin())
 	{
 		admin.GET("/", h.admin.MainPage)
-		admin.GET("/files", h.admin.FilesList)
-		admin.GET("/file/:id", h.admin.DownloadFile)
-		admin.DELETE("/file/:id", h.admin.DeleteFile)
+		leaks := admin.Group("/leaks")
+		{
+			leaks.GET("/files", h.admin.FilesList)
+			leaks.GET("/file/:id", h.admin.DownloadFile)
+			leaks.DELETE("/file/:id", h.admin.DeleteFile)
+
+		}
+		users := admin.Group("/users")
+		{
+			users.GET("/all", h.admin.AllUsers)
+			users.POST("/ban", h.admin.BanUser)
+			users.GET("/banned-users", h.admin.GetBannedUsers)
+			users.POST("/unban/", h.admin.UnbanUser)
+		}
 	}
+}
+
+func (h *Handler) termsOfUse(c *gin.Context) {
+	h.tmpl.ExecuteTemplate(c.Writer, "TermsOfUse.html", nil)
 }
 
 // StartServer runs the server
@@ -100,6 +114,7 @@ func (h *Handler) StartServer() {
 	h.handleUsers()
 	h.handleLeaks()
 	h.handleAdmin()
+
 	server := &http.Server{
 		Addr:    ":8080",
 		Handler: h.router,
@@ -110,6 +125,6 @@ func (h *Handler) StartServer() {
 	}
 	err := server.ListenAndServeTLS("certs/server.crt", "certs/server.key")
 	if err != nil {
-		log.Fatal(err)
+		logg.Fatal(fmt.Sprint("ListenAndServeTLS: ", err))
 	}
 }
