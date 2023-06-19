@@ -40,7 +40,7 @@ func (l *LeakService) FilesList() ([]models.LeakData, error) {
 			Id:          f.Id,
 			Name:        f.Name,
 			Description: f.Description,
-			Size:        f.Size,
+			Size:        float64(f.Size) / 1024 / 1024,
 		}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {
@@ -121,7 +121,7 @@ func (l *LeakService) GetUserFilesList(userId string) ([]models.LeakData, error)
 			Id:          f.Id,
 			Name:        f.Name,
 			Description: f.Description,
-			Size:        f.Size,
+			Size:        float64(f.Size) / 1024 / 1024,
 		}
 		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
 		if err != nil {

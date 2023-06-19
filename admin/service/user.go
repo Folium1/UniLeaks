@@ -46,7 +46,7 @@ func (s *UserService) AllUsers() ([]*models.User, error) {
 }
 
 // IsAdmin checks if user is admin
-func (s *UserService) IsAdmin(id int) (bool, error) {
+func (s *UserService) IsAdmin(id string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	isAdmin, err := s.repo.IsAdmin(ctx, id)
@@ -58,10 +58,10 @@ func (s *UserService) IsAdmin(id int) (bool, error) {
 }
 
 // GetByNick returns the user record from the database with the specified email address.
-func (s *UserService) GetByNick(nick string) (models.User, error) {
+func (s *UserService) GetByNick(nickName string) (models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	user, err := s.repo.GetByNick(ctx, nick)
+	user, err := s.repo.GetByNick(ctx, nickName)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get user by nick: ", err))
 		return user, errHandler.UserListReceiveErr
@@ -82,7 +82,7 @@ func (s *UserService) GetBannedUsers() ([]*models.User, error) {
 }
 
 // UnbanUser unbans user
-func (s *UserService) UnbanUser(id int) error {
+func (s *UserService) UnbanUser(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := s.repo.UnbanUser(ctx, id)
