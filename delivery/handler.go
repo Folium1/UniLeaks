@@ -85,7 +85,7 @@ func (h *Handler) handleLeaks() {
 
 // handleAdmin handles the admin routes
 func (h *Handler) handleAdmin() {
-	admin := h.router.Group("/admin", middleware.AuthAndRefreshMiddleware(), middleware.IsAdmin())
+	admin := h.router.Group("/admin", middleware.AuthAndRefreshMiddleware(), middleware.OnlyAdminMiddleware())
 	{
 		admin.GET("/", h.admin.MainPage)
 		leaks := admin.Group("/leaks")
@@ -105,8 +105,12 @@ func (h *Handler) handleAdmin() {
 	}
 }
 
+// termsOfUse handles the terms of use page
 func (h *Handler) termsOfUse(c *gin.Context) {
-	h.tmpl.ExecuteTemplate(c.Writer, "TermsOfUse.html", nil)
+	err := h.tmpl.ExecuteTemplate(c.Writer, "TermsOfUse.html", nil)
+	if err != nil {
+		logg.Error(err.Error())
+	}
 }
 
 // StartServer runs the server
