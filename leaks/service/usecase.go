@@ -7,7 +7,6 @@ import (
 	"leaks/leaks"
 	"leaks/logger"
 	"leaks/models"
-	"log"
 	"strconv"
 )
 
@@ -65,7 +64,6 @@ func (s *Service) FilesList(data models.SubjectData) ([]models.LeakData, error) 
 			logg.Error("Couldn't find dislikes property")
 			return nil, errHandler.FileListReceiveErr
 		}
-		log.Println(dislikesStr)
 		dislikes, err := strconv.Atoi(dislikesStr)
 		if err != nil {
 			logg.Error("Couldn't convert dislikes to int")

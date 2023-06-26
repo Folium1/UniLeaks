@@ -13,10 +13,6 @@ import (
 	errHandler "leaks/err"
 )
 
-type scanResult struct {
-	Result bool `json:"CleanResult"`
-}
-
 // scanFile checks file for viruses, returns false, if virus has been detected
 func scanFile(file []byte) (bool, error) {
 	url := "https://api.cloudmersive.com/virus/scan/file"
@@ -57,11 +53,13 @@ func scanFile(file []byte) (bool, error) {
 		logg.Error(fmt.Sprint("Couldn't read response body, err:", err))
 		return true, errHandler.FileCheckErr
 	}
-	var result scanResult
+	var result struct {
+		Res bool `json:"CleanResult"`
+	}
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't unmarshal response body, err:", err))
 		return true, err
 	}
-	return result.Result, nil
+	return result.Res, nil
 }

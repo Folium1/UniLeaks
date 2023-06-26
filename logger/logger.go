@@ -9,7 +9,7 @@ import (
 
 func NewLogger() *zap.Logger {
 	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{"logger/logfile.txt"}
+	cfg.OutputPaths = []string{"logfile.log"}
 
 	cfg.EncoderConfig = zapcore.EncoderConfig{
 		MessageKey:   "message",

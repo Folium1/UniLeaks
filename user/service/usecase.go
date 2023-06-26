@@ -9,7 +9,6 @@ import (
 	"leaks/models"
 	repository "leaks/user"
 
-	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,20 +23,11 @@ func New(repository repository.Repository) UserUseCase {
 	return UserUseCase{repository}
 }
 
-// isDuplicateEntryError checks if the given error is a MySQL duplicate entry error.
-func isDuplicateEntryError(err error) bool {
-	var mysqlErr *mysql.MySQLError
-	if errors.As(err, &mysqlErr) {
-		return mysqlErr.Number == 1062 // MySQL error code for duplicate entry
-	}
-	return false
-}
-
 // Create creates a new user in the repository.
-func (u UserUseCase) CreateUser(ctx context.Context, newUser models.User) (int, error) {
+func (u *UserUseCase) CreateUser(ctx context.Context, newUser models.User) (int, error) {
 	userId, err := u.repo.CreateUser(ctx, newUser)
 	// Check if the error is a duplicate entry error.
-	if isDuplicateEntryError(err) {
+	if errHandler.IsDuplicateEntryError(err) {
 		logg.Error(fmt.Sprint("Couldn't create user, err: ", err))
 		return -1, errors.New("Юзер з таким мейлом або ніком вже існує")
 	}
@@ -49,33 +39,34 @@ func (u UserUseCase) CreateUser(ctx context.Context, newUser models.User) (int, 
 }
 
 // GetById gets the user with the given id from the repository.
-func (u UserUseCase) GetById(ctx context.Context, id int) (models.User, error) {
+func (u *UserUseCase) GetById(ctx context.Context, id int) (models.User, error) {
 	user, err := u.repo.GetById(ctx, id)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get user, err: ", err))
-		return user, errors.New("Couldn't get user with that id")
+		return user, errors.New("Помилка отримання данних, спробуйте ще раз")
 	}
 	return user, nil
 }
 
 // GetByNick gets the user with the given email from the repository.
-func (u UserUseCase) GetByNick(ctx context.Context, nick string) (models.User, error) {
+func (u *UserUseCase) GetByNick(ctx context.Context, nick string) (models.User, error) {
 	user, err := u.repo.GetByNick(ctx, nick)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get user by mail, err: ", err))
-		return models.User{}, errors.New("Couldn't get user, by mail")
+		return models.User{}, errors.New("Юзер з таким ніком не знайдений")
 	}
 	return user, nil
 }
 
-// IsBanned checks if the user with the given email is banned. If the user is banned, it returns an error = UserIsBannedErr.
-func (u UserUseCase) IsBanned(ctx context.Context, userMail string) error {
+// IsBanned checks if the user with the given email is banned. If the user is banned, it returns an error = UserIsBannedErr,else returns nil.
+func (u *UserUseCase) IsBanned(ctx context.Context, userMail string) error {
 	mails, err := u.repo.BannedMails(ctx)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get banned mails, err: ", err))
 		return errHandler.ServerErr
 	}
 	// Check if the user is banned by comparing the user's email with the banned emails hash.
+	// If the user is banned - return UserIsBannedErr.
 	for _, mail := range mails {
 		if err = bcrypt.CompareHashAndPassword([]byte(mail), []byte(userMail)); err == nil {
 			return errHandler.UserIsBannedErr
