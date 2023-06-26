@@ -1,8 +1,8 @@
 package main
 
 import (
-	"uniLeaks/config"
-	delivery "uniLeaks/delivery"
+	"leaks/config"
+	"leaks/delivery"
 )
 
 func main() {
