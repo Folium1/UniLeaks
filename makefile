@@ -2,15 +2,18 @@
 
 
 build:
-	rm go.mod
-	rm go.sum
-	rm ./main
+ifeq ($(wildcard go.mod),"")
+		rm -f go.mod
+endif
+ifeq ($(wildcard go.sum),"")
+		rm -f go.sum
+endif
 	go mod init leaks
 	go mod tidy
 	go build cmd/main.go
 
 run:
-ifneq ("$(wildcard $(main))","")
+ifeq ("$(wildcard $(main))","")
 	rm main
 	go build cmd/main.go
 else
@@ -19,5 +22,4 @@ endif
 	./main
 
 test:
-	go test -v ./testing
-
+	go test -v ./testing -count=1
