@@ -8,6 +8,7 @@ import (
 	user "leaks/user/service"
 	"os"
 	"testing"
+	"time"
 )
 
 var (
@@ -22,6 +23,8 @@ func TestUserUseCase(t *testing.T) {
 }
 
 func createUserTest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	testUsers := []struct {
 		data     models.User
 		testName string
@@ -39,7 +42,7 @@ func createUserTest(t *testing.T) {
 	}
 	for _, user := range testUsers {
 		t.Run(user.testName, func(t *testing.T) {
-			got, err := userService.CreateUser(context.Background(), user.data)
+			got, err := userService.CreateUser(ctx, user.data)
 			if err != nil && !errHandler.IsDuplicateEntryError(err) {
 				t.Error("Couldn't create user,err: ", err)
 			}
@@ -51,6 +54,8 @@ func createUserTest(t *testing.T) {
 }
 
 func getByIdTest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	type args struct {
 		ctx context.Context
 		id  int
@@ -61,10 +66,10 @@ func getByIdTest(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			testName: "Get existed user", args: args{context.Background(), 1}, wantErr: false,
+			testName: "Get existed user", args: args{ctx, 1}, wantErr: false,
 		},
 		{
-			testName: "Get user that doesn't exist", args: args{context.Background(), 50000}, wantErr: true,
+			testName: "Get user that doesn't exist", args: args{ctx, 50000}, wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -79,6 +84,8 @@ func getByIdTest(t *testing.T) {
 }
 
 func isBannedTest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	testData := []struct {
 		testName string
 		email    string
@@ -89,7 +96,7 @@ func isBannedTest(t *testing.T) {
 	}
 	for _, tt := range testData {
 		t.Run(tt.testName, func(t *testing.T) {
-			err := userService.IsBanned(context.Background(), tt.email)
+			err := userService.IsBanned(ctx, tt.email)
 			if err != nil && tt.want != nil && tt.want != err {
 				t.Error("Err:", err)
 			}
