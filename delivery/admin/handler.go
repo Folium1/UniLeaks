@@ -14,13 +14,13 @@ var logg = logger.NewLogger()
 
 type AdminHandler struct {
 	tmpl *template.Template
-	leak *admin.LeakService
-	user *admin.UserService
+	leak *admin.AdminLeakService
+	user *admin.AdminUserService
 }
 
 func New(tmpl *template.Template) *AdminHandler {
-	driveService := admin.NewLeakService()
-	userService := admin.NewUserService()
+	driveService := admin.NewAdminLeakService()
+	userService := admin.NewAdminUserService()
 	return &AdminHandler{tmpl, &driveService, &userService}
 }
 

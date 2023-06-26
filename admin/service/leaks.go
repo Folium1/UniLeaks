@@ -14,20 +14,20 @@ import (
 
 var logg = logger.NewLogger()
 
-type LeakService struct {
+type AdminLeakService struct {
 	repo *adminRepo.DriveRepo
 }
 
 // NewLeakService creates a new instance of the service.
-func NewLeakService() LeakService {
+func NewAdminLeakService() AdminLeakService {
 	repo := adminRepo.NewDriveRepo()
-	return LeakService{
+	return AdminLeakService{
 		repo: repo,
 	}
 }
 
 // FilesList returns a list of files from drive ordered by dislikes
-func (l *LeakService) FilesList() ([]models.LeakData, error) {
+func (l *AdminLeakService) FilesList() ([]models.LeakData, error) {
 	files, err := l.repo.FilesList()
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
@@ -69,7 +69,7 @@ func (l *LeakService) FilesList() ([]models.LeakData, error) {
 }
 
 // DeleteFile deletes file from drive
-func (l *LeakService) DeleteFile(fileId string) error {
+func (l *AdminLeakService) DeleteFile(fileId string) error {
 	err := l.repo.DeleteFile(fileId)
 	if err != nil {
 		return errors.New(fmt.Sprint("Couldn't delete file, err: ", err))
@@ -78,7 +78,7 @@ func (l *LeakService) DeleteFile(fileId string) error {
 }
 
 // File retrieves a specific file from the repository.
-func (l *LeakService) File(fileID string) (models.LeakData, error) {
+func (l *AdminLeakService) File(fileID string) (models.LeakData, error) {
 	// Check if the file exists
 	if fileID == "" {
 		logg.Error("File not found, id is empty")
@@ -108,7 +108,7 @@ func (l *LeakService) File(fileID string) (models.LeakData, error) {
 }
 
 // GetUserFilesList returns a list of files from drive uploaded by a particular user.
-func (l *LeakService) GetUserFilesList(userId string) ([]models.LeakData, error) {
+func (l *AdminLeakService) GetUserFilesList(userId string) ([]models.LeakData, error) {
 	files, err := l.repo.GetUserFilesList(userId)
 	if err != nil {
 		logg.Error(fmt.Sprint("Couldn't get user files list: ", err))
@@ -149,7 +149,7 @@ func (l *LeakService) GetUserFilesList(userId string) ([]models.LeakData, error)
 }
 
 // DeleteAllUserFiles deletes all files of a specific user.
-func (l *LeakService) DeleteAllUserFiles(userId string) error {
+func (l *AdminLeakService) DeleteAllUserFiles(userId string) error {
 	err := l.repo.DeleteAllUserFiles(userId)
 	if err != nil {
 		return errors.New(fmt.Sprint("Couldn't delete user files, err: ", err))

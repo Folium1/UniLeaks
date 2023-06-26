@@ -45,7 +45,7 @@ func (r *UserRepo) AllUsers(ctx context.Context) ([]*models.User, error) {
 }
 
 // IsAdmin checks if user is admin
-func (r *UserRepo) IsAdmin(ctx context.Context, id string) (bool, error) {
+func (r *UserRepo) IsAdmin(ctx context.Context, id int) (bool, error) {
 	var user models.User
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&user)
 	if result.Error != nil {
@@ -69,10 +69,10 @@ func (r *UserRepo) GetByNick(ctx context.Context, nick string) (models.User, err
 // GetBannedUsers returns all banned users
 func (r *UserRepo) GetBannedUsers(ctx context.Context) ([]*models.User, error) {
 	var users []*models.User
-	result := r.db.WithContext(ctx).Where("is_banned = ?", true).Find(&users)
-	if result.Error != nil {
-		logger.Error(fmt.Sprint("Couldn't get banned users, err: ", result.Error))
-		return nil, result.Error
+	err := r.db.WithContext(ctx).Where("is_banned = ?", true).Find(&users).Error
+	if err != nil {
+		logger.Error(fmt.Sprint("Couldn't get banned users, err: ", err))
+		return nil, err
 	}
 	return users, nil
 }

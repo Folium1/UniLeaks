@@ -10,12 +10,12 @@ var logg = logger.NewLogger()
 
 type Handler struct {
 	tmpl        *template.Template
-	userService userAdmin.UserService
+	userService userAdmin.AdminUserService
 }
 
 // New returns a new instance of the auth handler.
-func New() Handler {
+func New() *Handler {
 	tmpl := template.Must(template.ParseGlob("templates/*"))
-	userService := userAdmin.NewUserService()
-	return Handler{tmpl: tmpl, userService: userService}
+	userService := userAdmin.NewAdminUserService()
+	return &Handler{tmpl: tmpl, userService: userService}
 }

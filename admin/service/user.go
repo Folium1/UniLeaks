@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-type UserService struct {
+type AdminUserService struct {
 	repo *adminRepo.UserRepo
 }
 
-// NewUserService creates a new instance of the service.
-func NewUserService() UserService {
+// NewAdminUserService creates a new instance of the service.
+func NewAdminUserService() AdminUserService {
 	repo := adminRepo.NewUserRepository()
-	return UserService{
+	return AdminUserService{
 		repo: repo,
 	}
 }
 
 // BanUser bans user
-func (s *UserService) BanUser(id int) error {
+func (s *AdminUserService) BanUser(id int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := s.repo.BanUser(ctx, id)
@@ -34,7 +34,7 @@ func (s *UserService) BanUser(id int) error {
 }
 
 // AllUsers returns all users
-func (s *UserService) AllUsers() ([]*models.User, error) {
+func (s *AdminUserService) AllUsers() ([]*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	users, err := s.repo.AllUsers(ctx)
@@ -46,7 +46,7 @@ func (s *UserService) AllUsers() ([]*models.User, error) {
 }
 
 // IsAdmin checks if user is admin
-func (s *UserService) IsAdmin(id string) (bool, error) {
+func (s *AdminUserService) IsAdmin(id int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	isAdmin, err := s.repo.IsAdmin(ctx, id)
@@ -58,7 +58,7 @@ func (s *UserService) IsAdmin(id string) (bool, error) {
 }
 
 // GetByNick returns the user record from the database with the specified email address.
-func (s *UserService) GetByNick(nickName string) (models.User, error) {
+func (s *AdminUserService) GetByNick(nickName string) (models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	user, err := s.repo.GetByNick(ctx, nickName)
@@ -70,7 +70,7 @@ func (s *UserService) GetByNick(nickName string) (models.User, error) {
 }
 
 // GetBannedUsers returns all banned users
-func (s *UserService) GetBannedUsers() ([]*models.User, error) {
+func (s *AdminUserService) GetBannedUsers() ([]*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	users, err := s.repo.GetBannedUsers(ctx)
@@ -82,7 +82,7 @@ func (s *UserService) GetBannedUsers() ([]*models.User, error) {
 }
 
 // UnbanUser unbans user
-func (s *UserService) UnbanUser(id string) error {
+func (s *AdminUserService) UnbanUser(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := s.repo.UnbanUser(ctx, id)

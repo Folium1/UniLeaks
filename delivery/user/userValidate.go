@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// isPasswordValid checks if the given password is valid
 func isPasswordValid(password string) error {
 	if len(password) < 8 {
 		return errors.New("Пароль повинен містити хоча б 8 символівІ")
@@ -44,11 +45,10 @@ func isPasswordValid(password string) error {
 	if !hasDigit {
 		return errors.New("Пароль повинен містити хоча б одну цифру")
 	}
-
 	return nil
-
 }
 
+// isNickNameValid checks if the given nickName is valid
 func isNickNameValid(nickName string) error {
 	if len(nickName) < 3 {
 		return errors.New("Нікнейм повинен містити хоча б 3 символи")
@@ -61,7 +61,7 @@ func isMailValid(mail string) bool {
 	return strings.HasSuffix(mail, os.Getenv("MAIL_DOMAIN"))
 }
 
-// hashPassword hashes the given password
+// hashPassword hashes the given string
 func hashString(password string) ([]byte, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
@@ -71,7 +71,7 @@ func hashString(password string) ([]byte, error) {
 }
 
 // checkIfUserBanned checks if the given user is banned
-func checkIfMailIsBanned(userService userService.UserUseCase, mail string) error {
+func checkIfMailIsBanned(userService *userService.UserUseCase, mail string) error {
 	return userService.IsBanned(context.Background(), mail)
 }
 

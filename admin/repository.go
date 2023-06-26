@@ -15,7 +15,7 @@ type DriveRepository interface {
 }
 
 type UserRepository interface {
-	BanUser(userId int) error
+	BanUser(userId string) error
 	AllUsers() ([]*models.User, error)
 	IsAdmin(ctx context.Context, userId int) (bool, error)
 	GetByNick(ctx context.Context, nick string) (models.User, error)

@@ -2,17 +2,19 @@ package user
 
 import (
 	"html/template"
-	"uniLeaks/user"
-	userRepository "uniLeaks/user/repository/mysql"
-	userService "uniLeaks/user/service"
+	"leaks/logger"
+	userRepository "leaks/user/repository/mysql"
+	userService "leaks/user/service"
 )
+
+var logg = logger.NewLogger()
 
 type UserHandler struct {
 	tmpl        *template.Template
-	userService user.Repository
+	userService *userService.UserUseCase
 }
 
-func New(tmpl *template.Template) UserHandler {
+func New(tmpl *template.Template) *UserHandler {
 	userService := userService.New(userRepository.New())
-	return UserHandler{tmpl: tmpl, userService: userService}
+	return &UserHandler{tmpl: tmpl, userService: &userService}
 }
