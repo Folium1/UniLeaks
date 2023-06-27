@@ -53,10 +53,6 @@ Before running the project, you need to configure the necessary environment vari
 ```plaintext
    MYSQL = ""
    SALT = ""
-   REDIS_ADDR = ""
-   RedisUsername = ""
-   REDIS_PASSWORD = ""
-   Redis_DB = "0"
    // api for checking files fo viruses
    CLOUD_MERSIVE_API = ""
    GOOGLE_CLIENT_ID = ""
