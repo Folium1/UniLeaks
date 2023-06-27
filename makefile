@@ -2,10 +2,10 @@
 
 
 build:
-ifeq ($(wildcard go.mod),"")
+ifneq ($(wildcard go.mod),"")
 		rm -f go.mod
 endif
-ifeq ($(wildcard go.sum),"")
+ifneq ($(wildcard go.sum),"")
 		rm -f go.sum
 endif
 	go mod init leaks
