@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"leaks/pkg/logger"
 	"leaks/pkg/models"
@@ -44,23 +45,33 @@ func NewDriveClient() (*drive.Service, error) {
 	return service, nil
 }
 
-// MysqlConn creates a new MySQL connection
+// MysqlConn creates a new MySQL connection with retry mechanism
 func MysqlConn() (*gorm.DB, error) {
 	mysqlConn := os.Getenv("MYSQL")
-	db, err := gorm.Open(mysql.New(mysql.Config{
-		DSN: mysqlConn,
-	}), &gorm.Config{})
-	if err != nil {
-		logg.Fatal(fmt.Sprint("Couldn't connect to MySQL, err:", err))
+	var db *gorm.DB
+	var err error
+	maxRetries := 10
+	retryInterval := time.Second * 5
+	// Retry loop
+	for retries := 0; retries < maxRetries; retries++ {
+		db, err = gorm.Open(mysql.New(mysql.Config{
+			DSN: mysqlConn,
+		}), &gorm.Config{})
+		if err == nil {
+			return db, nil
+		}
+		logg.Info(fmt.Sprintf("Failed to connect to MySQL, err: %s. Retrying in %s...", err, retryInterval))
+		time.Sleep(retryInterval)
 	}
-	return db, nil
+	logg.Fatal(fmt.Sprintf("Couldn't connect to MySQL after %d retries", maxRetries))
+	return nil, fmt.Errorf("failed to connect to MySQL")
 }
 
 // InitMYSQL creates needed tables
 func InitMYSQL() {
 	db, err := MysqlConn()
 	if err != nil {
-		logg.Fatal(fmt.Sprint("Couldn't connect to mysql, err:", err))
+		logg.Fatal(err.Error())
 	}
 	// Create tables
 	err = db.AutoMigrate(models.User{})
