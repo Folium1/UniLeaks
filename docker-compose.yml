@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  app:
+    image: leaks
+    ports:
+      - 8080:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql
+    ports:
+      - 3305:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=leaks
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p root"
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 3
