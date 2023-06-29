@@ -4,11 +4,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"html/template"
+	admin "leaks/pkg/admin/http"
 	auth "leaks/pkg/http/auth"
-	admin "leaks/pkg/http/admin"
-	leaksHandler "leaks/pkg/http/leaks"
-	user "leaks/pkg/http/user"
+	leaksHandler "leaks/pkg/leaks/http"
 	"leaks/pkg/logger"
+	user "leaks/pkg/user/http"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -27,19 +27,28 @@ type Handler struct {
 	router *gin.Engine
 }
 
-// New returns a new instance of handler
 func New() Handler {
 	tmpl := template.Must(template.ParseGlob("templates/*"))
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
+
 	// Load and parse the header template
 	headerTemplate := template.Must(template.ParseFiles("templates/header.html"))
+
 	// Set the template engine to use the parsed templates
 	r.SetHTMLTemplate(headerTemplate)
+
 	newUserHandler := user.New(tmpl)
 	leaksHandler := leaksHandler.New(tmpl)
 	adminHandler := admin.New(tmpl)
-	return Handler{tmpl: tmpl, leaks: leaksHandler, user: newUserHandler, admin: adminHandler, router: r}
+
+	return Handler{
+		tmpl:   tmpl,
+		leaks:  leaksHandler,
+		user:   newUserHandler,
+		admin:  adminHandler,
+		router: r,
+	}
 }
 
 // handleUsers handles the user routes

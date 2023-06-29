@@ -15,7 +15,7 @@ type Handler struct {
 
 // New returns a new instance of the auth handler.
 func New() *Handler {
-	tmpl := template.Must(template.ParseGlob("/pkg/templates/*"))
+	tmpl := template.Must(template.ParseGlob("templates/*"))
 	userService := userAdmin.NewAdminUserService()
 	return &Handler{tmpl: tmpl, userService: userService}
 }
