@@ -1,8 +1,8 @@
 package main
 
 import (
-	"leaks/config"
-	"leaks/delivery"
+	"leaks/pkg/config"
+	delivery "leaks/pkg/http"
 )
 
 func main() {
