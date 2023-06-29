@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaks</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        p {
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #555;
+            text-align: center;
+        }
+
+        ul {
+            padding-left: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    {{ template "header" }}
+    <div class="container">
+        <h1>Ласкаво просимо до DnoLeaks!</h1>
+        <p>Тут ви можете ділитись своїми та скачувати файли інших.</p>
+        <p>Використовуйте навігаційне меню у верхній частині, щоб отримати доступ до різних частин сайту.</p>
+
+        <div class="decorative-line"></div>
+        <p style="font-weight: bold;">Використовуючи наш сайт ви автоматично погоджуєтесь з <a style="color: #45668e;;"
+                href="/leaks/terms">угодою
+                користувача</a>.</p>
+    </div>
+</body>
+
+</html>

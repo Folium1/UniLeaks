@@ -1,0 +1,106 @@
+{{ define "fileListStyle" }}
+<style>
+    body {
+        padding-left: 50px;
+        padding-right: 50px;
+    }
+
+    h1 {
+        color: #4e69a2;
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .file-item {
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        padding: 10px;
+
+        margin-bottom: 10px;
+        position: relative;
+    }
+
+    .file-name {
+        color: #4e69a2;
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .file-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+
+    .file-size {
+        color: #999;
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .user-info {
+        color: #999;
+        font-size: 12px;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .download-button {
+        background-color: #4e69a2;
+        color: #fff;
+        border: none;
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 4px;
+        text-decoration: none;
+        cursor: pointer;
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+    }
+
+    .like-dislike {
+        display: flex;
+        align-items: center;
+        margin-right: 10px;
+        cursor: pointer;
+        color: #999;
+        font-size: 12px;
+        background-color: transparent;
+        border: none;
+        padding: 0;
+        transition: color 0.5s ease;
+    }
+
+    .like-dislike:hover,
+    .like-dislike:hover .like-symbol,
+    .like-dislike:hover .dislike-symbol {
+        color: #2a588b;
+    }
+
+    .like-symbol,
+    .dislike-symbol {
+        font-size: 18px;
+        margin-right: 5px;
+    }
+
+    .like-symbol {
+        color: #999;
+    }
+
+    .dislike-symbol {
+        color: #999;
+    }
+
+    .like-dislike.active {
+        color: #2a588b;
+    }
+
+
+    /* .fa {
+        margin-right: 5px;
+    } */
+</style>
+{{ end }}
