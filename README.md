@@ -24,6 +24,7 @@ To run this project, you need to have the following prerequisites installed:
 - Go (1.20 or higher)
 - MySQL (5.7 or higher)
 - Git
+- Docker (24.0 or higher)
 
 ## Installation
 1. Clone the repository:
@@ -31,16 +32,16 @@ To run this project, you need to have the following prerequisites installed:
    git clone https://github.com/Folium1/UniLeaks.git
 ```
 
-1. Run commands:
+2. Run the following commands:
 ```bash
     make generate-certs
     make build
 ```
 
-1. Set up the database:
+3. Set up the database:
    - Create a new MySQL database for the project.
 
-2. Configure Google Drive API:
+4. Configure Google Drive API:
    - Go to the [Google Cloud Console](https://console.cloud.google.com/).
    - Create a new project or select an existing one.
    - Enable the Google Drive API for the project.
@@ -51,20 +52,23 @@ To run this project, you need to have the following prerequisites installed:
 Before running the project, you need to configure the necessary environment variables. Create a `.env` file in the project root directory and populate it with the following variables:
 
 ```plaintext
-   MYSQL = ""
-   SALT = ""
-   // api for checking files fo viruses
-   CLOUD_MERSIVE_API = ""
-   GOOGLE_CLIENT_ID = ""
-   GOOGLE_SECRET = ""
-   // used to check, if user if from particular university
-   MAIL_DOMAIN = ""
+   MYSQL=""
+   SALT=""
+   # api for checking files for viruses
+   CLOUD_MERSIVE_API=""
+   GOOGLE_CLIENT_ID=""
+   GOOGLE_SECRET=""
+   # used to check if the user is from a particular university
+   MAIL_DOMAIN=""
 ```
 
 ## Usage
-To start the application, run the following command:
+To start the application in docker, run the following command:
 ```bash
-    make run
+    docker build -t leaks .
+    # sometimes can fail, because app can run quicker then db container, still don't know how to fix it
+    # but it will try to reconnect to db later, you don't need to to extra moves
+    docker-compose up --build
 ```
 
-The application will be accessible at `http://localhost:8080/`.
+The application will be accessible at `https://localhost:8080/leaks`.
