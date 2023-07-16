@@ -13,13 +13,11 @@ endif
 	go build cmd/main.go
 
 run:
-ifeq ("$(wildcard $(main))","")
+ifneq ("$(wildcard $(main))","")
 	rm main
-	go build cmd/main.go
-else
-	go build cmd/main.go
 endif
-	./main
+	docker build -t leaks .
+	docker-compose up --build
 
 certs:
 	mkdir -p certs
@@ -34,5 +32,8 @@ generate-certs: certs/server.key
 	openssl x509 -req -days 365 -in certs/server.csr -signkey certs/server.key -out certs/server.crt
 
 
-test:
-	go test -v ./testing -count=1
+tests:
+	docker run -d -p 3306:3306 --name mysql -e MYSQL_DATABASE=leaks -e MYSQL_ROOT_PASSWORD=root mysql
+	go test -v ./... -count=1
+	docker stop mysql
+	docker rm mysql
