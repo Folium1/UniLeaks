@@ -1,12 +1,12 @@
 package main
 
 import (
+	leaksApi "leaks/pkg/api"
 	"leaks/pkg/config"
-	delivery "leaks/pkg/http"
 )
 
 func main() {
-	config.InitMYSQL()
-	handler := delivery.New()
-	handler.StartServer()
+	config.InitMysqlTables()
+	api := leaksApi.NewApiHandler()
+	api.StartServer()
 }

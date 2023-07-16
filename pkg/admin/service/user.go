@@ -3,91 +3,90 @@ package service
 import (
 	"context"
 	"fmt"
-	adminRepo "leaks/pkg/admin/repository"
+
+	adminRepo "leaks/pkg/admin"
+	repo "leaks/pkg/admin/repository"
 	errHandler "leaks/pkg/err"
 	"leaks/pkg/models"
 	"time"
 )
 
 type AdminUserService struct {
-	repo *adminRepo.UserRepo
+	receiver     adminRepo.UserReceiver
+	lister       adminRepo.UserLister
+	statusSetter adminRepo.UserStatusSetter
 }
 
-// NewAdminUserService creates a new instance of the service.
-func NewAdminUserService() AdminUserService {
-	repo := adminRepo.NewUserRepository()
-	return AdminUserService{
-		repo: repo,
+func NewAdminUserService() *AdminUserService {
+	r := repo.NewUserRepository()
+	return &AdminUserService{
+		receiver:     r,
+		lister:       r,
+		statusSetter: r,
 	}
 }
 
-// BanUser bans user
-func (s *AdminUserService) BanUser(id int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	err := s.repo.BanUser(ctx, id)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't ban user: ", err))
-		return errHandler.BanUserErr
-	}
-	return nil
-}
-
-// AllUsers returns all users
 func (s *AdminUserService) AllUsers() ([]*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	users, err := s.repo.AllUsers(ctx)
+	users, err := s.lister.AllUsers(ctx)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get all users: ", err))
+		l.Error(fmt.Sprint("Couldn't get all users: ", err))
 		return nil, errHandler.UserListReceiveErr
 	}
 	return users, nil
 }
 
-// IsAdmin checks if user is admin
-func (s *AdminUserService) IsAdmin(id int) (bool, error) {
+func (s *AdminUserService) IsAdmin(id int) (models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	isAdmin, err := s.repo.IsAdmin(ctx, id)
+	user, err := s.receiver.GetUserById(ctx, id)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't check if user is admin: ", err))
-		return false, errHandler.UserListReceiveErr
+		l.Error(fmt.Sprint("Couldn't check if user is admin: ", err))
+		return models.User{}, errHandler.UserListReceiveErr
 	}
-	return isAdmin, nil
+	return user, nil
 }
 
-// GetByNick returns the user record from the database with the specified email address.
 func (s *AdminUserService) GetByNick(nickName string) (models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	user, err := s.repo.GetByNick(ctx, nickName)
+	user, err := s.receiver.GetByNick(ctx, nickName)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get user by nick: ", err))
+		l.Error(fmt.Sprint("Couldn't get user by nick: ", err))
 		return user, errHandler.UserListReceiveErr
 	}
 	return user, nil
 }
 
-// GetBannedUsers returns all banned users
-func (s *AdminUserService) GetBannedUsers() ([]*models.User, error) {
+func (s *AdminUserService) BannedUsers() ([]*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	users, err := s.repo.GetBannedUsers(ctx)
+	users, err := s.lister.BannedUsers(ctx)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get banned users: ", err))
+		l.Error(fmt.Sprint("Couldn't get banned users: ", err))
 		return nil, errHandler.UserListReceiveErr
 	}
 	return users, nil
 }
 
-// UnbanUser unbans user
+func (s *AdminUserService) BanUser(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := s.statusSetter.BanUser(ctx, id)
+	if err != nil {
+		l.Error(fmt.Sprint("Couldn't ban user: ", err))
+		return errHandler.BanUserErr
+	}
+	return nil
+}
+
 func (s *AdminUserService) UnbanUser(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err := s.repo.UnbanUser(ctx, id)
+	err := s.statusSetter.UnbanUser(ctx, id)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't unban user: ", err))
+		l.Error(fmt.Sprint("Couldn't unban user: ", err))
 		return err
 	}
 	return nil

@@ -3,155 +3,97 @@ package service
 import (
 	"errors"
 	"fmt"
-	adminRepo "leaks/pkg/admin/repository"
+
+	adminRepo "leaks/pkg/admin"
+	repo "leaks/pkg/admin/repository"
 	errHandler "leaks/pkg/err"
+
 	"leaks/pkg/logger"
 	"leaks/pkg/models"
-	"strconv"
 
 	_ "google.golang.org/api/drive/v3"
 )
 
-var logg = logger.NewLogger()
+var l = logger.NewLogger()
 
 type AdminLeakService struct {
-	repo *adminRepo.DriveRepo
+	lister   adminRepo.FileLister
+	deleter  adminRepo.FileDeleter
+	receiver adminRepo.FileReceiver
 }
 
-// NewLeakService creates a new instance of the service.
-func NewAdminLeakService() AdminLeakService {
-	repo := adminRepo.NewDriveRepo()
-	return AdminLeakService{
-		repo: repo,
+func NewAdminLeakService() *AdminLeakService {
+	r := repo.NewDriveRepo()
+	return &AdminLeakService{
+		lister:   r,
+		deleter:  r,
+		receiver: r,
 	}
 }
 
-// FilesList returns a list of files from drive ordered by dislikes
-func (l *AdminLeakService) FilesList() ([]models.LeakData, error) {
-	files, err := l.repo.FilesList()
+func (a *AdminLeakService) FilesOrderedByDislikes() ([]models.Leak, error) {
+	driveFiles, err := a.lister.FilesOrderedByDislikes()
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get files list: ", err))
+		l.Error(fmt.Sprint("Couldn't get files list: ", err))
 		return nil, errHandler.FileListReceiveErr
 	}
-	filesList := make([]models.LeakData, 0, len(files))
-	// Iterate over the files and create a list of LeakData
-	for _, f := range files {
-		file := &models.File{
-			Id:          f.Id,
-			Name:        f.Name,
-			Description: f.Description,
-			Size:        float64(f.Size) / 1024 / 1024,
-		}
-		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
-		if err != nil {
-			logg.Error(fmt.Sprint("Couldn't convert dislikes to int: ", err))
-			return nil, errHandler.FileListReceiveErr
-		}
-		likes, err := strconv.Atoi(f.Properties["likes"])
-		if err != nil {
-			logg.Error(fmt.Sprint("Couldn't convert likes to int: ", err))
-			return nil, errHandler.FileListReceiveErr
-		}
-		// Create a new file and user data
-		userData := &models.UserFileData{
-			Dislikes: dislikes,
-			Likes:    likes,
-		}
-		leakData := models.LeakData{
-			File:     file,
-			UserData: userData,
-			Subject:  &models.SubjectData{},
-		}
-		filesList = append(filesList, leakData)
+	filesList, err := parseDriveDataToModel(driveFiles)
+	if err != nil {
+		return nil, err
 	}
 
 	return filesList, nil
 }
 
-// DeleteFile deletes file from drive
-func (l *AdminLeakService) DeleteFile(fileId string) error {
-	err := l.repo.DeleteFile(fileId)
+func (a *AdminLeakService) DeleteFile(fileId string) error {
+	err := a.deleter.DeleteFile(fileId)
 	if err != nil {
 		return errors.New(fmt.Sprint("Couldn't delete file, err: ", err))
 	}
 	return nil
 }
 
-// File retrieves a specific file from the repository.
-func (l *AdminLeakService) File(fileID string) (models.LeakData, error) {
-	// Check if the file exists
-	if fileID == "" {
-		logg.Error("File not found, id is empty")
-		return models.LeakData{}, errHandler.FileNotFoundErr
-	}
-	// Retrieve the file from the repository
-	b, fileData, err := l.repo.File(fileID)
+func (a *AdminLeakService) File(fileID string) (models.Leak, error) {
+	b, file, err := a.receiver.File(fileID)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get file: ", err))
+		l.Error(fmt.Sprint("Couldn't get file: ", err))
 		if errors.Is(err, errHandler.FileNotFoundErr) {
-			return models.LeakData{}, errHandler.FileNotFoundErr
+			return models.Leak{}, errHandler.FileNotFoundErr
 		}
-		return models.LeakData{}, errHandler.FileReceiveErr
+		return models.Leak{}, errHandler.FileReceiveErr
 	}
-	// Create a new file and leak data
-	file := &models.File{
-		Id:      fileData.Id,
-		Name:    fileData.Name,
+
+	fileData := &models.File{
+		Id:      file.Id,
+		Name:    file.Name,
 		Content: b,
 	}
-	leakData := models.LeakData{
-		File:     file,
-		UserData: &models.UserFileData{},
-		Subject:  &models.SubjectData{},
+	leak := models.Leak{
+		File:    fileData,
+		User:    &models.UserFileData{},
+		Subject: &models.Subject{},
 	}
-	return leakData, nil
+
+	return leak, nil
 }
 
-// GetUserFilesList returns a list of files from drive uploaded by a particular user.
-func (l *AdminLeakService) GetUserFilesList(userId string) ([]models.LeakData, error) {
-	files, err := l.repo.GetUserFilesList(userId)
+func (a *AdminLeakService) GetFilesListUploadedByUser(userId string) ([]models.Leak, error) {
+	driveFiles, err := a.lister.GetUserFilesList(userId)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't get user files list: ", err))
+		l.Error(fmt.Sprint("Couldn't get user files list: ", err))
 		return nil, errHandler.FileListReceiveErr
 	}
-	filesList := make([]models.LeakData, 0, len(files))
-	// Iterate over the files and create a list of LeakData
-	for _, f := range files {
-		file := &models.File{
-			Id:          f.Id,
-			Name:        f.Name,
-			Description: f.Description,
-			Size:        float64(f.Size) / 1024 / 1024,
-		}
-		dislikes, err := strconv.Atoi(f.Properties["dislikes"])
-		if err != nil {
-			logg.Error(fmt.Sprint("Couldn't convert dislikes to int: ", err))
-			return nil, errHandler.FileListReceiveErr
-		}
-		likes, err := strconv.Atoi(f.Properties["likes"])
-		if err != nil {
-			logg.Error(fmt.Sprint("Couldn't convert likes to int: ", err))
-			return nil, errHandler.FileListReceiveErr
-		}
-		// Create a new file and user data
-		userData := &models.UserFileData{
-			Dislikes: dislikes,
-			Likes:    likes,
-		}
-		leakData := models.LeakData{
-			File:     file,
-			UserData: userData,
-			Subject:  &models.SubjectData{},
-		}
-		filesList = append(filesList, leakData)
+	filesList, err := parseDriveDataToModel(driveFiles)
+	if err != nil {
+		return nil, err
 	}
 	return filesList, nil
 }
 
-// DeleteAllUserFiles deletes all files of a specific user.
-func (l *AdminLeakService) DeleteAllUserFiles(userId string) error {
-	err := l.repo.DeleteAllUserFiles(userId)
+func (a *AdminLeakService) DeleteAllFilesUploadedByUser(userId string) error {
+	err := a.deleter.DeleteAllUserFiles(userId)
 	if err != nil {
+
 		return errors.New(fmt.Sprint("Couldn't delete user files, err: ", err))
 	}
 	return nil

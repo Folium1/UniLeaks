@@ -1,34 +1,26 @@
 package http
 
 import (
-	"fmt"
-	"html/template"
 	admin "leaks/pkg/admin/service"
-	errHandler "leaks/pkg/err"
 	"leaks/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
-var logg = logger.NewLogger()
+var l = logger.NewLogger()
 
 type AdminHandler struct {
-	tmpl *template.Template
 	leak *admin.AdminLeakService
 	user *admin.AdminUserService
 }
 
-func New(tmpl *template.Template) *AdminHandler {
+func New() *AdminHandler {
 	driveService := admin.NewAdminLeakService()
 	userService := admin.NewAdminUserService()
-	return &AdminHandler{tmpl, &driveService, &userService}
+	return &AdminHandler{driveService, userService}
 }
 
-// MainPage displays the main page of admin panel
-func (a *AdminHandler) MainPage(ctx *gin.Context) {
-	err := a.tmpl.ExecuteTemplate(ctx.Writer, "admin.html", nil)
-	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't execute template: ", err))
-		errHandler.ResponseWithErr(ctx, a.tmpl, errHandler.ErrPage, errHandler.ServerErr)
-	}
+func (a *AdminHandler) MainPage(c *gin.Context) {
+	// if user got here, he is an admin
+	c.Status(200)
 }
