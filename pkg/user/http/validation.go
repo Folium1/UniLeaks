@@ -3,28 +3,26 @@ package http
 import (
 	"context"
 	"errors"
-	"leaks/pkg/models"
-	userService "leaks/pkg/user/service"
 	"os"
 	"strings"
 	"unicode"
 
+	errHandler "leaks/pkg/err"
+	"leaks/pkg/models"
+	userService "leaks/pkg/user/service"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
-// isPasswordValid checks if the given password is valid
 func isPasswordValid(password string) error {
 	if len(password) < 8 {
 		return errors.New("Пароль повинен містити хоча б 8 символівІ")
 	}
-
-	// Check for uppercase, lowercase, and numeric characters
 	var (
 		hasUpper bool
 		hasLower bool
 		hasDigit bool
 	)
-	// Iterate over password and set flags when conditions are met
 	for _, char := range password {
 		switch {
 		case unicode.IsUpper(char):
@@ -35,7 +33,6 @@ func isPasswordValid(password string) error {
 			hasDigit = true
 		}
 	}
-	// Return an error if a condition is not met
 	if !hasUpper {
 		return errors.New("Пароль повинен містити хоча б одну велику літеру")
 	}
@@ -48,20 +45,17 @@ func isPasswordValid(password string) error {
 	return nil
 }
 
-// isNickNameValid checks if the given nickName is valid
 func isNickNameValid(nickName string) error {
-	if len(nickName) < 3 {
-		return errors.New("Нікнейм повинен містити хоча б 3 символи")
+	if len(nickName) < 3 || len(nickName) > 20 {
+		return errors.New("Нікнейм повинен містити від 3 до 20 символів")
 	}
 	return nil
 }
 
-// isMailValid checks if the given mail is valid
 func isMailValid(mail string) bool {
 	return strings.HasSuffix(mail, os.Getenv("MAIL_DOMAIN"))
 }
 
-// hashPassword hashes the given string
 func hashString(password string) ([]byte, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
@@ -70,13 +64,11 @@ func hashString(password string) ([]byte, error) {
 	return hashedPassword, nil
 }
 
-// checkIfUserBanned checks if the given user is banned
 func checkIfMailIsBanned(userService *userService.UserUseCase, mail string) error {
 	return userService.IsBanned(context.Background(), mail)
 }
 
-// validateUserInput validates the email and password fields of a user
-func validateUserInput(user models.User) error {
+func validateUserInput(userService *userService.UserUseCase, user models.User) error {
 	if err := isPasswordValid(user.Password); err != nil {
 		return err
 	}
@@ -85,6 +77,14 @@ func validateUserInput(user models.User) error {
 	}
 	if !isMailValid(user.Email) {
 		return errors.New("Невірний формат мейла")
+	}
+	if err := checkIfMailIsBanned(userService, user.Email); err != nil {
+		logger.Error(err.Error())
+		if err == errHandler.UserIsBannedErr {
+			return errors.New("Юзер з таким мейлом, був забанений раніше")
+		} else {
+			return err
+		}
 	}
 	return nil
 }

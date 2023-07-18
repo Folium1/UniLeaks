@@ -2,30 +2,30 @@ package http
 
 import (
 	"fmt"
-	"html/template"
-	"leaks/pkg/logger"
-	userRepository "leaks/pkg/user/repository/mysql"
+
+	auth "leaks/pkg/auth"
+	logg "leaks/pkg/logger"
 	userService "leaks/pkg/user/service"
 
 	"github.com/joho/godotenv"
 )
 
-// Init initializes the environment variables
+var middleware = auth.New()
+
 func init() {
 	err := godotenv.Load()
 	if err != nil {
-		logg.Fatal(fmt.Sprint("Couldn't load local variables, err:", err))
+		logger.Fatal(fmt.Sprint("Couldn't load local variables, err:", err))
 	}
 }
 
-var logg = logger.NewLogger()
+var logger = logg.NewLogger()
 
 type UserHandler struct {
-	tmpl        *template.Template
 	userService *userService.UserUseCase
 }
 
-func New(tmpl *template.Template) *UserHandler {
-	userService := userService.New(userRepository.New())
-	return &UserHandler{tmpl: tmpl, userService: &userService}
+func New() *UserHandler {
+	userService := userService.New()
+	return &UserHandler{userService: &userService}
 }
