@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"leaks/pkg/models"
 	"strconv"
@@ -9,37 +10,45 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// parseFileData parses the file data from the request
-func parseFileData(data *models.File, c *gin.Context) error {
+func parseData(c *gin.Context) (models.Leak, error) {
+	data := models.Leak{}
+	data.User.UserId = c.MustGet("userId").(string)
+	err := parseFile(data.File, c)
+	if err != nil {
+		logger.Error(fmt.Sprint("Couldn't parse file data : ", err))
+		return data, err
+	}
+	err = parseSubject(data.Subject, c)
+	if err != nil {
+		logger.Error(fmt.Sprint("Couldn't parse subject data : ", err))
+		return data, err
+	}
+	return data, nil
+}
+
+func parseFile(data *models.File, c *gin.Context) error {
 	file, err := c.FormFile("file-upload")
 	if err != nil {
 		return err
 	}
-	fileDescription := c.PostForm("file-description")
-	data.Description = fileDescription
+	data.Description = c.PostForm("file-description")
 	data.Name = file.Filename
-	// Open the file
 	f, err := file.Open()
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	// Create a buffer to store the file content
-	buffer := &bytes.Buffer{}
-
-	// Copy the file content to the buffer
-	_, err = io.Copy(buffer, f)
+	buffer := bytes.Buffer{}
+	_, err = io.Copy(&buffer, f)
 	if err != nil {
 		return err
 	}
-	// Set the buffer bytes as the file content
 	data.Content = buffer.Bytes()
 	return nil
 }
 
-// parseSubjectData parses the subject data from the request
-func parseSubjectData(data *models.SubjectData, c *gin.Context) error {
+func parseSubject(data *models.Subject, c *gin.Context) error {
 	var err error
 	data.Faculty = c.PostForm("faculty")
 	data.Subject = c.PostForm("subject")
