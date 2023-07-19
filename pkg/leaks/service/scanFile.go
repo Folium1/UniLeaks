@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -22,19 +21,19 @@ func scanFile(file []byte) (bool, error) {
 	part1, err := writer.CreateFormFile("inputFile", "file")
 	_, err = io.Copy(part1, bytes.NewReader(file))
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't copy file to payload, err:", err))
+		l.Error(fmt.Sprint("Couldn't copy file to payload, err:", err))
 		return true, errHandler.FileCheckErr
 	}
 	err = writer.Close()
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't close writer, err:", err))
+		l.Error(fmt.Sprint("Couldn't close writer, err:", err))
 		return true, errHandler.FileCheckErr
 	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't create a new request, err:", err))
+		l.Error(fmt.Sprint("Couldn't create a new request, err:", err))
 		return true, errHandler.FileCheckErr
 	}
 	req.Header.Add("Content-Type", "multipart/form-data")
@@ -43,14 +42,14 @@ func scanFile(file []byte) (bool, error) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't send request, err:", err))
+		l.Error(fmt.Sprint("Couldn't send request, err:", err))
 		return true, errHandler.FileCheckErr
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't read response body, err:", err))
+		l.Error(fmt.Sprint("Couldn't read response body, err:", err))
 		return true, errHandler.FileCheckErr
 	}
 	var result struct {
@@ -58,7 +57,7 @@ func scanFile(file []byte) (bool, error) {
 	}
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		logg.Error(fmt.Sprint("Couldn't unmarshal response body, err:", err))
+		l.Error(fmt.Sprint("Couldn't unmarshal response body, err:", err))
 		return true, err
 	}
 	return result.Res, nil
