@@ -1,6 +1,6 @@
-# Anonymous Task Sharing Platform
+# File storage site
 
-This repository contains a project developed in Go, utilizing MySQL for data storage and JWT for authentication. The project aims to provide a platform where students can anonymously share files related to university tasks. The files are stored on Google Drive.
+This repository contains a project developed in Go, utilizing MySQL for data storage and JWT for authentication. T
 
 ## Table of Contents
 - [Anonymous Task Sharing Platform](#anonymous-task-sharing-platform)
